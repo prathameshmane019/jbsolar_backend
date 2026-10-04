@@ -1,0 +1,43 @@
+databases:
+  - name: jbsolar-db
+    databaseName: jbsolar
+    user: jbsolar
+    plan: free
+
+services:
+  - type: web
+    name: jbsolar-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: jbsolar-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: jbsolar-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: jbsolar-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: jbsolar-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: jbsolar-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DDL_AUTO
+        value: update
+      - key: APP_ADMIN_MOBILE
+        sync: false
+      - key: APP_ADMIN_PASSWORD
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
