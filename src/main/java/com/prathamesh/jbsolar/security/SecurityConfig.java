@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -23,7 +24,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins:http://localhost:3000}") String allowedOrigins) {
+            @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:8081}") String allowedOrigins) {
         CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOrigins(Arrays.stream(allowedOrigins.split(",")).map(String::trim).toList());
         cors.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
@@ -40,13 +41,17 @@ public class SecurityConfig {
         return http.cors(cors -> { }).csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/v1/auth/**", "/actuator/health", "/v3/api-docs/**",
+                    .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/actuator/health", "/v3/api-docs/**",
                         "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, exception) -> {
                     response.setStatus(401);
                     response.setContentType("application/json");
-                    response.getWriter().write("{\"error\":\"unauthorized\",\"message\":\"Authentication is required\"}");
+                    response.setHeader("WWW-Authenticate", "Bearer");
+                    response.setHeader("Cache-Control", "no-store");
+                    response.getWriter().write(
+                            "{\"error\":\"unauthorized\",\"message\":\"A valid bearer access token is required; log in again if it has expired\"}");
                 }))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
