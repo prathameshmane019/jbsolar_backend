@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +22,6 @@ import com.prathamesh.jbsolar.api.dto.AgentResponse;
 import com.prathamesh.jbsolar.api.dto.AgentUpdateRequest;
 import com.prathamesh.jbsolar.api.dto.DataQuery;
 import com.prathamesh.jbsolar.api.dto.PageResponse;
-import com.prathamesh.jbsolar.security.UserPrincipal;
 import com.prathamesh.jbsolar.service.AgentService;
 
 import jakarta.validation.Valid;
@@ -31,6 +29,7 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/v1/agents")
 @Validated
+@PreAuthorize("hasRole('ADMIN')")
 public class AgentController {
 
     private final AgentService service;
@@ -40,7 +39,6 @@ public class AgentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AgentResponse> create(
             @Valid @RequestBody AgentRequest request) {
 
@@ -52,14 +50,11 @@ public class AgentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'VENDOR_AGENT')")
-    public PageResponse<AgentResponse> list(@ModelAttribute DataQuery query,
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return service.search(query, principal);
+    public PageResponse<AgentResponse> list(@ModelAttribute DataQuery query) {
+        return service.search(query);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AgentResponse> findById(
             @PathVariable UUID id) {
 
@@ -67,13 +62,11 @@ public class AgentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public AgentResponse update(@PathVariable UUID id, @Valid @RequestBody AgentUpdateRequest request) {
         return service.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(
             @PathVariable UUID id) {
 

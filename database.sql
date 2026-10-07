@@ -57,7 +57,6 @@ CREATE TABLE "farmers"(
     "customer_code" VARCHAR(50) NOT NULL,
     "full_name" VARCHAR(150) NOT NULL,
     "mobile" VARCHAR(20) NOT NULL,
-    "aadhaar_hash" VARCHAR(64) NULL,
     "address" TEXT NULL,
     "district" VARCHAR(100) NULL,
     "taluka" VARCHAR(100) NULL,
@@ -77,27 +76,6 @@ CREATE INDEX "farmers_created_by_index" ON
     "farmers"("created_by");
 CREATE INDEX "farmers_deleted_at_index" ON
     "farmers"("deleted_at");
-CREATE UNIQUE INDEX "farmers_aadhaar_hash_unique" ON
-    "farmers"("aadhaar_hash");
-CREATE INDEX "farmers_created_by_deleted_at_index" ON
-    "farmers"("created_by", "deleted_at");
-CREATE TABLE "stored_files"(
-    "id" UUID NOT NULL,
-    "resource_type" VARCHAR(30) NOT NULL CHECK ("resource_type" IN('FARMER', 'POLICY')),
-    "resource_id" UUID NOT NULL,
-    "purpose" VARCHAR(30) NULL CHECK ("purpose" IN('FARMER_DOCUMENT', 'CUSTOMER_SIGNATURE', 'PUMP_SET_IMAGE')),
-    "storage_key" VARCHAR(500) NOT NULL,
-    "original_filename" VARCHAR(255) NOT NULL,
-    "content_type" VARCHAR(100) NOT NULL,
-    "file_size" BIGINT NOT NULL CHECK ("file_size" BETWEEN 1 AND 10485760),
-    "created_by" UUID NOT NULL,
-    "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "uploaded_at" TIMESTAMP(0) WITHOUT TIME ZONE NULL
-);
-ALTER TABLE "stored_files" ADD PRIMARY KEY("id");
-ALTER TABLE "stored_files" ADD CONSTRAINT "stored_files_storage_key_unique" UNIQUE("storage_key");
-CREATE INDEX "stored_files_resource_index" ON
-    "stored_files"("resource_type", "resource_id", "created_by", "uploaded_at");
 CREATE TABLE "policy_plans"(
     "id" UUID NOT NULL,
     "name" VARCHAR(150) NOT NULL,
@@ -126,8 +104,6 @@ CREATE TABLE "policies"(
     "amount" DECIMAL(12, 2) NOT NULL,
     "gst_amount" DECIMAL(12, 2) NOT NULL,
     "total_amount" DECIMAL(12, 2) NOT NULL,
-    "pump_power_hp" NUMERIC(8, 2) NULL,
-    "motor_head_meters" NUMERIC(8, 2) NULL,
     "status" VARCHAR(255) CHECK
         (
             "status" IN(
@@ -162,8 +138,8 @@ CREATE TABLE "payments"(
     "id" UUID NOT NULL,
     "policy_id" UUID NOT NULL,
     "payment_number" VARCHAR(50) NOT NULL,
-    "gateway" VARCHAR(50) NOT NULL,
-    "gateway_order_id" VARCHAR(150) NOT NULL,
+    "gateway" VARCHAR(50) NULL,
+    "gateway_order_id" VARCHAR(150) NULL,
     "gateway_payment_id" VARCHAR(150) NULL,
     "amount" DECIMAL(12, 2) NOT NULL,
     "payment_method" VARCHAR(50) NULL,
@@ -207,8 +183,6 @@ CREATE INDEX "invoices_policy_id_index" ON
     "invoices"("policy_id");
 CREATE INDEX "invoices_payment_id_index" ON
     "invoices"("payment_id");
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_policy_id_unique" UNIQUE("policy_id");
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_payment_id_unique" UNIQUE("payment_id");
 ALTER TABLE
     "policies" ADD CONSTRAINT "policies_policy_plan_id_foreign" FOREIGN KEY("policy_plan_id") REFERENCES "policy_plans"("id");
 ALTER TABLE
@@ -229,4 +203,3 @@ ALTER TABLE
     "policies" ADD CONSTRAINT "policies_created_by_foreign" FOREIGN KEY("created_by") REFERENCES "vendor_agents"("id");
 ALTER TABLE
     "farmers" ADD CONSTRAINT "farmers_created_by_foreign" FOREIGN KEY("created_by") REFERENCES "vendor_agents"("id");
-ALTER TABLE "stored_files" ADD CONSTRAINT "stored_files_created_by_foreign" FOREIGN KEY("created_by") REFERENCES "vendor_agents"("id");

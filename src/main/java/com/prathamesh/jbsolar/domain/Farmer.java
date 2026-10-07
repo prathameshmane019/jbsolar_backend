@@ -18,13 +18,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "farmers", indexes = {
-        @Index(name = "farmers_deleted_at_index", columnList = "deleted_at"),
-        @Index(name = "farmers_aadhaar_hash_unique", columnList = "aadhaar_hash", unique = true),
-        @Index(name = "farmers_mobile_index", columnList = "mobile"),
-        @Index(name = "farmers_created_by_index", columnList = "created_by"),
-        @Index(name = "farmers_created_by_deleted_at_index", columnList = "created_by, deleted_at")
-})
+@Table(name = "farmers", indexes = @Index(name = "farmers_deleted_at_index", columnList = "deleted_at"))
 @Data
 public class Farmer {
     @Id @UuidGenerator
@@ -35,8 +29,6 @@ public class Farmer {
     private String fullName;
     @Column(nullable = false, length = 20)
     private String mobile;
-    @Column(name = "aadhaar_hash", length = 64)
-    private String aadhaarHash;
     @Column(columnDefinition = "text")
     private String address;
     @Column(length = 100)
@@ -57,5 +49,22 @@ public class Farmer {
 
     @PrePersist void onCreate() { createdAt = Instant.now(); updatedAt = createdAt; }
     @PreUpdate void onUpdate() { updatedAt = Instant.now(); }
-
+//    public UUID getId() { return id; }
+//    public String getCustomerCode() { return customerCode; }
+//    public void setCustomerCode(String customerCode) { this.customerCode = customerCode; }
+//    public String getFullName() { return fullName; }
+//    public void setFullName(String fullName) { this.fullName = fullName; }
+//    public String getMobile() { return mobile; }
+//    public void setMobile(String mobile) { this.mobile = mobile; }
+//    public String getAddress() { return address; }
+//    public void setAddress(String address) { this.address = address; }
+//    public String getDistrict() { return district; }
+//    public void setDistrict(String district) { this.district = district; }
+//    public String getTaluka() { return taluka; }
+//    public void setTaluka(String taluka) { this.taluka = taluka; }
+//    public String getVillage() { return village; }
+//    public void setVillage(String village) { this.village = village; }
+//    public VendorAgent getCreatedBy() { return createdBy; }
+//    public void setCreatedBy(VendorAgent createdBy) { this.createdBy = createdBy; }
+//    public Instant getCreatedAt() { return createdAt; }
 }

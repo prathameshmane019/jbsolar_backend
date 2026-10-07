@@ -40,24 +40,10 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    ResponseEntity<?> handleDataIntegrity(DataIntegrityViolationException exception, HttpServletRequest request) {
-        String cause = exception.getMostSpecificCause().getMessage();
-        if (cause != null && cause.toLowerCase(java.util.Locale.ROOT).contains("aadhaar_hash")) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
-                    "timestamp", Instant.now(), "error", "aadhaar_already_registered",
-                    "message", "A farmer with this Aadhaar number is already registered"));
-        }
-        if (cause != null && cause.toLowerCase(java.util.Locale.ROOT).contains("mobile")) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
-                    "timestamp", Instant.now(), "error", "mobile_already_registered",
-                    "message", "A user with this mobile number already exists"));
-        }
-        logger.warn("Data integrity violation while processing {} {} (cause type: {})",
-                request.getMethod(), request.getRequestURI(),
-                exception.getMostSpecificCause().getClass().getSimpleName());
+    ResponseEntity<?> handleDataIntegrity(DataIntegrityViolationException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
-                "timestamp", Instant.now(), "error", "data_integrity_violation",
-                "message", "The request conflicts with existing data or a database constraint"));
+                "timestamp", Instant.now(), "error", "record_has_dependencies",
+                "message", "The record cannot be permanently deleted because related data still references it"));
     }
 
     @ExceptionHandler(Exception.class)

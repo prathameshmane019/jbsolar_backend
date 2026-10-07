@@ -26,9 +26,6 @@ import com.prathamesh.jbsolar.repository.PolicyRepository;
 import com.prathamesh.jbsolar.repository.UserRepository;
 import com.prathamesh.jbsolar.repository.VendorAgentRepository;
 import com.prathamesh.jbsolar.repository.VendorRepository;
-import com.prathamesh.jbsolar.security.UserPrincipal;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.data.jpa.domain.Specification;
 
 @Service
 @Transactional
@@ -59,7 +56,7 @@ public class AgentService {
 
     public AgentResponse create(AgentRequest request) {
 
-        String mobile = MobileNumber.normalize(request.mobile());
+        String mobile = request.mobile().trim();
         if (users.existsByMobile(mobile)) {
             throw new ApiException(
                     HttpStatus.CONFLICT,
@@ -95,7 +92,7 @@ public class AgentService {
 
     public AgentResponse update(UUID id, AgentUpdateRequest request) {
         VendorAgent agent = requireActiveAgent(id);
-        String mobile = MobileNumber.normalize(request.mobile());
+        String mobile = request.mobile().trim();
         if (users.existsByMobileAndIdNot(mobile, agent.getUser().getId())) {
             throw new ApiException(HttpStatus.CONFLICT, "mobile_already_registered",
                     "A user with this mobile number already exists");
@@ -148,17 +145,10 @@ public class AgentService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<AgentResponse> search(DataQuery query, UserPrincipal principal) {
-        Specification<VendorAgent> specification = DataQuerySupport.specification(query,
-                        List.of("fullName", "user.mobile", "vendor.name"), true, "vendor.id", false);
-        if (principal.role() != UserRole.ADMIN) {
-            if (principal.role() != UserRole.VENDOR_AGENT || principal.agentId() == null) {
-                throw new AccessDeniedException("Agent profile is required");
-            }
-            specification = specification.and((root, criteriaQuery, builder) ->
-                    builder.equal(root.get("id"), principal.agentId()));
-        }
-        var page = agents.findAll(specification, DataQuerySupport.pageable(query,
+    public PageResponse<AgentResponse> search(DataQuery query) {
+        var page = agents.findAll(DataQuerySupport.specification(query,
+                        List.of("fullName", "user.mobile", "vendor.name"), true, "vendor.id", false),
+                DataQuerySupport.pageable(query,
                         Set.of("fullName", "user.mobile", "vendor.name", "status", "createdAt", "updatedAt")));
         return PageResponse.from(page.map(this::toResponse));
     }

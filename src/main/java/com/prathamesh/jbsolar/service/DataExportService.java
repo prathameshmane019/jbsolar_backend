@@ -33,7 +33,7 @@ import com.prathamesh.jbsolar.repository.VendorRepository;
 
 @Service
 public class DataExportService {
-    private static final int PAGE_SIZE = 100;
+    private static final int PAGE_SIZE = 500;
     private static final int MAX_ROWS_PER_SHEET = 100_000;
 
     private final VendorRepository vendors;
@@ -184,8 +184,7 @@ public class DataExportService {
     private void writePolicies(SXSSFWorkbook workbook, DataQuery query, boolean ignoreUnsupportedStatus) {
         Sheet sheet = workbook.createSheet("Policies");
         header(sheet, "ID", "Policy number", "Farmer ID", "Farmer", "Plan ID", "Plan", "Vendor ID",
-                "Start date", "End date", "Amount", "GST", "Total amount", "Pump power (HP)",
-                "Motor head (meters)", "Status", "Created at");
+                "Start date", "End date", "Amount", "GST", "Total amount", "Status", "Created at");
         int row = 1;
         int pageNumber = 0;
         Page<Policy> page;
@@ -202,8 +201,7 @@ public class DataExportService {
                         policy.getFarmer().getFullName(), policy.getPlan().getId(), policy.getPlan().getName(),
                         policy.getVendor().getId(), policy.getStartDate(), policy.getEndDate(),
                         policy.getAmount(), policy.getGstAmount(), policy.getTotalAmount(),
-                        policy.getPumpPowerHp(), policy.getMotorHeadMeters(), policy.getStatus(),
-                        policy.getCreatedAt());
+                        policy.getStatus(), policy.getCreatedAt());
             }
         } while (page.hasNext());
     }

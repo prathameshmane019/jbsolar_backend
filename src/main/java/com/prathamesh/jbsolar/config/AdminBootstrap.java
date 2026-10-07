@@ -9,7 +9,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.prathamesh.jbsolar.domain.User;
 import com.prathamesh.jbsolar.domain.UserRole;
 import com.prathamesh.jbsolar.repository.UserRepository;
-import com.prathamesh.jbsolar.service.MobileNumber;
 
 @Configuration
 public class AdminBootstrap {
@@ -21,9 +20,9 @@ public class AdminBootstrap {
             if (mobile.isBlank() != password.isBlank()) {
                 throw new IllegalStateException("Set both APP_ADMIN_MOBILE and APP_ADMIN_PASSWORD to bootstrap an admin");
             }
-            if (!mobile.isBlank() && !users.existsByMobile(MobileNumber.normalize(mobile))) {
+            if (!mobile.isBlank() && !users.existsByMobile(mobile)) {
                 User admin = new User();
-                admin.setMobile(MobileNumber.normalize(mobile));
+                admin.setMobile(mobile);
                 admin.setPasswordHash(encoder.encode(password));
                 admin.setRole(UserRole.ADMIN);
                 users.save(admin);

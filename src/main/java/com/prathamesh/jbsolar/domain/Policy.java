@@ -45,10 +45,6 @@ public class Policy {
     private BigDecimal gstAmount;
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
-    @Column(name = "pump_power_hp", precision = 8, scale = 2)
-    private BigDecimal pumpPowerHp;
-    @Column(name = "motor_head_meters", precision = 8, scale = 2)
-    private BigDecimal motorHeadMeters;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private PolicyStatus status = PolicyStatus.PENDING;

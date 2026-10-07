@@ -9,8 +9,6 @@ import com.prathamesh.jbsolar.domain.Farmer;
 
 public interface FarmerRepository extends JpaRepository<Farmer, UUID>, JpaSpecificationExecutor<Farmer> {
     boolean existsByMobile(String mobile);
-    boolean existsByAadhaarHash(String aadhaarHash);
-    boolean existsByAadhaarHashAndIdNot(String aadhaarHash, UUID id);
     List<Farmer> findAllByCreatedByVendorId(UUID vendorId);
     Optional<Farmer> findByIdAndCreatedByVendorId(UUID id, UUID vendorId);
     long countByCreatedById(UUID agentId);

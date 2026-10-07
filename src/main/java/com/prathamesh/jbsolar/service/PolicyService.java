@@ -67,7 +67,6 @@ public class PolicyService {
         policy.setAmount(plan.getPrice());
         policy.setGstAmount(plan.getPrice().multiply(plan.getGstPercentage()).divide(new java.math.BigDecimal("100"), 2, RoundingMode.HALF_UP));
         policy.setTotalAmount(policy.getAmount().add(policy.getGstAmount()));
-        applyPumpSetDetails(policy, request);
         if (principal.role() == UserRole.VENDOR_AGENT) {
             policy.setCreatedBy(agents.findById(principal.agentId()).orElseThrow(() ->
                     new ApiException(HttpStatus.FORBIDDEN, "agent_profile_missing", "Agent profile is unavailable")));
@@ -143,7 +142,6 @@ public class PolicyService {
         policy.setGstAmount(plan.getPrice().multiply(plan.getGstPercentage())
                 .divide(new java.math.BigDecimal("100"), 2, RoundingMode.HALF_UP));
         policy.setTotalAmount(policy.getAmount().add(policy.getGstAmount()));
-        applyPumpSetDetails(policy, request);
         return toResponse(policy);
     }
 
@@ -176,12 +174,6 @@ public class PolicyService {
     private PolicyResponse toResponse(Policy p) {
         return new PolicyResponse(p.getId(), p.getPolicyNumber(), p.getFarmer().getId(), p.getFarmer().getFullName(),
                 p.getPlan().getId(), p.getPlan().getName(), p.getVendor().getId(), p.getStartDate(), p.getEndDate(),
-                p.getAmount(), p.getGstAmount(), p.getTotalAmount(), p.getStatus(),
-                p.getPumpPowerHp(), p.getMotorHeadMeters());
-    }
-
-    private void applyPumpSetDetails(Policy policy, PolicyRequest request) {
-        policy.setPumpPowerHp(request.pumpPowerHp());
-        policy.setMotorHeadMeters(request.motorHeadMeters());
+                p.getAmount(), p.getGstAmount(), p.getTotalAmount(), p.getStatus());
     }
 }

@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.Set;
 
 import com.prathamesh.jbsolar.domain.VendorAgent;
-import com.prathamesh.jbsolar.domain.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,7 +21,6 @@ import com.prathamesh.jbsolar.domain.RecordStatus;
 import com.prathamesh.jbsolar.repository.VendorRepository;
 import com.prathamesh.jbsolar.repository.VendorAgentRepository;
 import com.prathamesh.jbsolar.repository.PolicyRepository;
-import com.prathamesh.jbsolar.security.UserPrincipal;
 
 @Service
 @Transactional
@@ -70,13 +68,7 @@ public class VendorService {
     }
 
     @Transactional(readOnly = true)
-    public VendorResponse get(UUID id, UserPrincipal principal) {
-        if (principal.role() == UserRole.VENDOR_AGENT
-                && !id.equals(principal.vendorId())) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "vendor_not_found", "Vendor was not found");
-        }
-        return toResponse(requireActiveVendor(id));
-    }
+    public VendorResponse get(UUID id) { return toResponse(requireActiveVendor(id)); }
 
     private Vendor requireActiveVendor(UUID id) {
         return vendors.findById(id).filter(row -> row.getDeletedAt() == null)
