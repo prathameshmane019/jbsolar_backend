@@ -9,6 +9,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
+import java.nio.charset.StandardCharsets;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.HexFormat;
 
 import com.prathamesh.jbsolar.api.ApiException;
 import com.prathamesh.jbsolar.api.dto.FarmerRequest;
@@ -29,13 +34,24 @@ public class FarmerService {
     private final FarmerRepository farmers;
     private final VendorAgentRepository agents;
     private final PolicyRepository policies;
-    public FarmerService(FarmerRepository farmers, VendorAgentRepository agents, PolicyRepository policies) {
+    private final byte[] identityHashKey;
+    public FarmerService(FarmerRepository farmers, VendorAgentRepository agents, PolicyRepository policies,
+            @Value("${app.security.identity-hash-key}") String identityHashKey) {
         this.farmers = farmers;
         this.agents = agents;
         this.policies = policies;
+        this.identityHashKey = identityHashKey.getBytes(StandardCharsets.UTF_8);
+        if (this.identityHashKey.length < 32) {
+            throw new IllegalArgumentException("app.security.identity-hash-key must be at least 32 bytes");
+        }
     }
 
     public FarmerResponse create(FarmerRequest request, UserPrincipal principal) {
+        String aadhaarHash = hashAadhaar(request.aadhaarNumber());
+        if (farmers.existsByAadhaarHash(aadhaarHash)) {
+            throw new ApiException(HttpStatus.CONFLICT, "aadhaar_already_registered",
+                    "A farmer with this Aadhaar number is already registered");
+        }
         Farmer farmer = new Farmer();
         if (principal.role() == UserRole.VENDOR_AGENT) {
             farmer.setCreatedBy(agents.findById(principal.agentId()).orElseThrow(() ->
@@ -50,6 +66,7 @@ public class FarmerService {
         }
         farmer.setCustomerCode("F-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase());
         apply(farmer, request);
+        farmer.setAadhaarHash(aadhaarHash);
         return toResponse(farmers.save(farmer));
     }
 
@@ -65,9 +82,11 @@ public class FarmerService {
         if (principal.role() != UserRole.ADMIN) {
             query = withVendorId(query, principal.vendorId());
         }
+        String searchTerm = query.search() == null ? "" : query.search().trim();
+        String aadhaarHash = searchTerm.matches("[2-9][0-9]{11}") ? hashAadhaar(searchTerm) : null;
         var page = farmers.findAll(DataQuerySupport.specification(query,
                         List.of("customerCode", "fullName", "mobile", "address", "district", "taluka", "village"),
-                        false, "createdBy.vendor.id", false),
+                        false, "createdBy.vendor.id", false, false, "aadhaarHash", aadhaarHash),
                 DataQuerySupport.pageable(query, Set.of("customerCode", "fullName", "mobile",
                         "district", "taluka", "village", "createdAt", "updatedAt")));
         return PageResponse.from(page.map(this::toResponse));
@@ -89,6 +108,10 @@ public class FarmerService {
 
     public FarmerResponse update(UUID id, FarmerRequest request, UserPrincipal principal) {
         Farmer farmer = requireActiveFarmer(id, principal);
+        if (farmers.existsByAadhaarHashAndIdNot(hashAadhaar(request.aadhaarNumber()), id)) {
+            throw new ApiException(HttpStatus.CONFLICT, "aadhaar_already_registered",
+                    "A farmer with this Aadhaar number is already registered");
+        }
         apply(farmer, request);
         return toResponse(farmer);
     }
@@ -125,6 +148,7 @@ public class FarmerService {
     private ApiException notFound() { return new ApiException(HttpStatus.NOT_FOUND, "farmer_not_found", "Farmer was not found"); }
     private void apply(Farmer farmer, FarmerRequest request) {
         farmer.setFullName(request.fullName().trim()); farmer.setMobile(request.mobile().trim());
+        farmer.setAadhaarHash(hashAadhaar(request.aadhaarNumber()));
         farmer.setAddress(request.address()); farmer.setDistrict(request.district());
         farmer.setTaluka(request.taluka()); farmer.setVillage(request.village());
     }
@@ -132,5 +156,15 @@ public class FarmerService {
         return new FarmerResponse(farmer.getId(), farmer.getCustomerCode(), farmer.getFullName(), farmer.getMobile(),
                 farmer.getAddress(), farmer.getDistrict(), farmer.getTaluka(), farmer.getVillage(),
                 farmer.getCreatedBy() == null ? null : farmer.getCreatedBy().getId(), farmer.getCreatedAt());
+    }
+
+    private String hashAadhaar(String aadhaarNumber) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(identityHashKey, "HmacSHA256"));
+            return HexFormat.of().formatHex(mac.doFinal(aadhaarNumber.getBytes(StandardCharsets.UTF_8)));
+        } catch (java.security.GeneralSecurityException exception) {
+            throw new IllegalStateException("Aadhaar identifier hashing is unavailable", exception);
+        }
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.prathamesh.jbsolar.api.dto.LoginRequest;
 import com.prathamesh.jbsolar.api.dto.TokenResponse;
+import com.prathamesh.jbsolar.domain.UserRole;
 import com.prathamesh.jbsolar.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -20,6 +21,11 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+        return ResponseEntity.ok(authService.login(request, UserRole.ADMIN));
+    }
+
+    @PostMapping("/agent/login")
+    public ResponseEntity<TokenResponse> agentLogin(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request, UserRole.VENDOR_AGENT));
     }
 }

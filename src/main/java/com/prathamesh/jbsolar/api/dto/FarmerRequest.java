@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 
 public record FarmerRequest(@NotBlank @Size(max = 150) String fullName,
         @NotBlank @Pattern(regexp = "^[+0-9][0-9+ -]{7,19}$") String mobile,
+        @NotBlank @Pattern(regexp = "^[2-9][0-9]{11}$") String aadhaarNumber,
         @Size(max = 2000) String address, @Size(max = 100) String district,
         @Size(max = 100) String taluka, @Size(max = 100) String village) {
 }
