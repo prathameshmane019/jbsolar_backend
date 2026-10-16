@@ -63,9 +63,9 @@ public class VendorService {
     public PageResponse<VendorResponse> search(DataQuery query) {
         validateDateRange(query);
         var page = vendors.findAll(DataQuerySupport.specification(query,
-                        List.of("name", "contactPerson", "mobile", "email"), true, null, false),
+                        List.of("name", "contactPerson", "mobile", "email","vendorCode"), true, null, false),
                 DataQuerySupport.pageable(query,
-                        Set.of("name", "mobile", "email", "status", "createdAt", "updatedAt")));
+                        Set.of("name", "mobile","vendorCode", "email", "status", "createdAt", "updatedAt")));
         return PageResponse.from(page.map(this::toResponse));
     }
 
@@ -120,7 +120,7 @@ public class VendorService {
 
 
     private VendorResponse toResponse(Vendor vendor) {
-        return new VendorResponse(vendor.getId(), vendor.getName(), vendor.getContactPerson(), vendor.getMobile(),
+        return new VendorResponse(vendor.getId(),  vendor.getName(), vendor.getVendorCode(),vendor.getContactPerson(), vendor.getMobile(),
                 vendor.getEmail(), vendor.getStatus(), vendor.getCreatedAt());
     }
 }

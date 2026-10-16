@@ -76,12 +76,8 @@ public class FarmerService {
                 ? farmers.findAll() : farmers.findAllByCreatedByVendorId(principal.vendorId());
         return result.stream().filter(row -> row.getDeletedAt() == null).map(this::toResponse).toList();
     }
-
     @Transactional(readOnly = true)
     public PageResponse<FarmerResponse> search(DataQuery query, UserPrincipal principal) {
-        if (principal.role() != UserRole.ADMIN) {
-            query = withVendorId(query, principal.vendorId());
-        }
         String searchTerm = query.search() == null ? "" : query.search().trim();
         String aadhaarHash = searchTerm.matches("[2-9][0-9]{11}") ? hashAadhaar(searchTerm) : null;
         var page = farmers.findAll(DataQuerySupport.specification(query,
@@ -92,10 +88,6 @@ public class FarmerService {
         return PageResponse.from(page.map(this::toResponse));
     }
 
-    private DataQuery withVendorId(DataQuery query, UUID vendorId) {
-        return new DataQuery(query.page(), query.size(), query.sort(), query.direction(), query.search(),
-                query.status(), query.createdFrom(), query.createdTo(), vendorId);
-    }
 
     @Transactional(readOnly = true)
     public FarmerResponse get(UUID id, UserPrincipal principal) {

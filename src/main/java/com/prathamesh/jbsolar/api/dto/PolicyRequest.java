@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 
 public record PolicyRequest(@NotNull UUID farmerId, @NotNull UUID policyPlanId,
-        @NotNull LocalDate startDate, UUID vendorId,
+        @NotNull LocalDate startDate,@NotNull UUID vendorId,@NotNull UUID agentId,
         @DecimalMin("0.01") @Digits(integer = 6, fraction = 2) BigDecimal pumpPowerHp,
         @DecimalMin("0.01") @Digits(integer = 6, fraction = 2) BigDecimal motorHeadMeters) {
 }

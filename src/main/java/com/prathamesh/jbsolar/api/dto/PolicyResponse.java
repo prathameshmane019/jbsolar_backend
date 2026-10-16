@@ -4,9 +4,17 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 import com.prathamesh.jbsolar.domain.PolicyStatus;
-
-public record PolicyResponse(UUID id, String policyNumber, UUID farmerId, String farmerName,
-        UUID policyPlanId, String planName, UUID vendorId, LocalDate startDate, LocalDate endDate,
-        BigDecimal amount, BigDecimal gstAmount, BigDecimal totalAmount, PolicyStatus status,
-        BigDecimal pumpPowerHp, BigDecimal motorHeadMeters) {
-}
+public record PolicyResponse(
+        UUID id, String policyNumber,
+        UUID farmerId, String farmerName,
+        UUID planId, String planName,
+        UUID vendorId,
+        LocalDate startDate, LocalDate endDate,
+        BigDecimal amount, BigDecimal gstAmount, BigDecimal totalAmount,
+        PolicyStatus status,
+        BigDecimal pumpPowerHp, BigDecimal motorHeadMeters,
+        UUID agentId, String agentName,
+        // readable identifiers for the UI
+        String customerCode, String planCode,
+        String vendorName, String vendorCode,
+        String agentCode) {}
