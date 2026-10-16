@@ -16,6 +16,7 @@ import com.prathamesh.jbsolar.domain.UserRole;
 import com.prathamesh.jbsolar.repository.UserRepository;
 import com.prathamesh.jbsolar.repository.VendorAgentRepository;
 import com.prathamesh.jbsolar.security.JwtService;
+import com.prathamesh.jbsolar.service.MobileNumber;
 
 @Service
 public class AuthService {
@@ -32,9 +33,10 @@ public class AuthService {
     }
 
     @Transactional
-    public TokenResponse login(LoginRequest request) {
-        var user = users.findByMobile(request.mobile()).orElseThrow(this::invalidCredentials);
-        if (user.getStatus() != AccountStatus.ACTIVE || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+    public TokenResponse login(LoginRequest request, UserRole requiredRole) {
+        var user = users.findByMobile(MobileNumber.normalize(request.mobile())).orElseThrow(this::invalidCredentials);
+        if (user.getRole() != requiredRole || user.getStatus() != AccountStatus.ACTIVE
+                || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw invalidCredentials();
         }
         if (user.getRole() == UserRole.VENDOR_AGENT && agents.findByUserId(user.getId())

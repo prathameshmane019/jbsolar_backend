@@ -21,7 +21,10 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "vendor_agents", indexes = @Index(name = "vendor_agents_deleted_at_index", columnList = "deleted_at"))
+@Table(name = "vendor_agents", indexes = {
+        @Index(name = "vendor_agents_deleted_at_index", columnList = "deleted_at"),
+        @Index(name = "vendor_agents_vendor_id_index", columnList = "vendor_id")
+})
 @Data
 public class VendorAgent {
     @Id @UuidGenerator

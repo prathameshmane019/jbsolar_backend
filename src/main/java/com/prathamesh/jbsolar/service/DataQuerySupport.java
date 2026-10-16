@@ -21,7 +21,7 @@ import jakarta.persistence.criteria.Predicate;
 
 public final class DataQuerySupport {
     private static final int DEFAULT_PAGE_SIZE = 25;
-    private static final int MAX_PAGE_SIZE = 500;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private DataQuerySupport() {
     }
@@ -57,6 +57,13 @@ public final class DataQuerySupport {
 
     public static <T> Specification<T> specification(DataQuery query, List<String> searchFields,
             boolean hasStatus, String vendorIdPath, boolean ignoreStatus, boolean ignoreUnsupportedStatus) {
+        return specification(query, searchFields, hasStatus, vendorIdPath, ignoreStatus, ignoreUnsupportedStatus,
+                null, null);
+    }
+
+    public static <T> Specification<T> specification(DataQuery query, List<String> searchFields,
+            boolean hasStatus, String vendorIdPath, boolean ignoreStatus, boolean ignoreUnsupportedStatus,
+            String exactSearchField, String exactSearchValue) {
         if (query.createdFrom() != null && query.createdTo() != null
                 && query.createdFrom().isAfter(query.createdTo())) {
             throw new ApiException(org.springframework.http.HttpStatus.BAD_REQUEST, "invalid_date_range",
@@ -72,11 +79,14 @@ public final class DataQuerySupport {
 
             if (query.search() != null && !query.search().isBlank()) {
                 String term = "%" + escapeLike(query.search().trim().toLowerCase(java.util.Locale.ROOT)) + "%";
-                Predicate[] matches = searchFields.stream()
+                List<Predicate> matches = new ArrayList<>(searchFields.stream()
                         .map(field -> builder.like(
                                 builder.lower(path(root, field).as(String.class)), term, '\\'))
-                        .toArray(Predicate[]::new);
-                predicates.add(builder.or(matches));
+                        .toList());
+                if (exactSearchField != null && exactSearchValue != null) {
+                    matches.add(builder.equal(path(root, exactSearchField), exactSearchValue));
+                }
+                predicates.add(builder.or(matches.toArray(Predicate[]::new)));
             }
             if (!ignoreStatus && query.status() != null && !query.status().isBlank() && hasStatus) {
                 String requestedStatus = query.status().trim().toUpperCase(java.util.Locale.ROOT);

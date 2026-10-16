@@ -33,10 +33,6 @@ JB Solar Admin
                                   |
                                   +--> Register Farmer
                                   |
-                                  +--> Register Pump
-                                  |
-                                  +--> Record Installation
-                                  |
                                   +--> Upload Photos/Documents
                                   |
                                   +--> Select Policy Plan
@@ -308,6 +304,7 @@ Example:
 {
   "fullName": "Rajesh Patil",
   "mobile": "9876543210",
+  "aadhaarNumber": "234567891234",
   "address": "Village XYZ",
   "district": "Pune",
   "taluka": "Baramati",
@@ -317,34 +314,19 @@ Example:
 
 The backend should derive `created_by` and `vendor_id` from the
 authenticated agent. Do not trust these values from the mobile client.
+The Aadhaar number is required for identity deduplication. Store only a
+keyed HMAC digest in the database, enforce a unique index on that digest,
+and never return or log the Aadhaar number.
 
 ------------------------------------------------------------------------
 
-# 8. Pump Registration
+# 8. Solar System Photos and Documents
 
-After registering a farmer:
+The current backend does not create pump or solar-set inventory records.
+Until the full solar system model is decided, associate agent-uploaded
+photos and documents with the farmer record.
 
-``` text
-Farmer
-  |
-  +--> Add Pump
-```
-
-Agent enters:
-
--   Pump brand
--   Pump model
--   Pump serial number
--   Capacity
--   Installation date
-
-Agent uploads:
-
--   Pump photo
--   Serial number photo
--   Installation photo
-
-Recommended upload architecture:
+Upload directly to object storage:
 
 ``` text
 React Native
@@ -357,6 +339,10 @@ React Native
 ```
 
 This avoids sending large image files through the Spring Boot server.
+Use `POST /api/v1/mobile/files/upload-url` with the farmer resource type
+and ID, PUT the file bytes directly to the returned private S3 URL, then
+call `POST /api/v1/mobile/files/{fileId}/complete`. Only metadata and
+the private object key are stored in PostgreSQL.
 
 ------------------------------------------------------------------------
 
@@ -428,8 +414,10 @@ FAILED
 REFUNDED
 ```
 
-The backend should verify payment gateway callbacks/webhooks before
-activating the policy.
+The backend currently includes a demo-only payment simulator controlled by
+`DUMMY_PAYMENT_ENABLED`. A simulated success activates a pending policy and
+creates one invoice record. Never enable this simulator in production.
+Replace it later with a real provider order and signed webhook verification.
 
 ------------------------------------------------------------------------
 
@@ -556,7 +544,6 @@ Farmer
 |
 +-- Personal Information
 +-- Pump
-+-- Installation
 +-- Policy
 +-- Payments
 +-- Invoice
@@ -610,8 +597,6 @@ Use API versioning from the beginning.
 /api/v1/vendors
 /api/v1/agents
 /api/v1/farmers
-/api/v1/pumps
-/api/v1/installations
 /api/v1/policy-plans
 /api/v1/policies
 /api/v1/payments
@@ -624,20 +609,19 @@ Use API versioning from the beginning.
 Examples:
 
 ``` http
-POST /api/v1/auth/login
+POST /api/v1/auth/login          (admin website only)
+POST /api/v1/auth/agent/login    (vendor-agent mobile app only)
 
 GET /api/v1/farmers
 POST /api/v1/farmers
 GET /api/v1/farmers/{id}
 
-POST /api/v1/pumps
-POST /api/v1/installations
-
 GET /api/v1/policy-plans
 POST /api/v1/policies
 
-POST /api/v1/payments/create-order
-POST /api/v1/payments/webhook
+POST /api/v1/policies/{policyId}/payments/dummy-order
+POST /api/v1/payments/{paymentId}/simulate-success
+GET  /api/v1/policies/{policyId}/invoice
 
 GET /api/v1/invoices/{id}
 
@@ -645,6 +629,12 @@ POST /api/v1/services
 GET /api/v1/services
 PUT /api/v1/services/{id}
 ```
+
+Images and documents do not pass through the API server. The app requests
+`POST /api/v1/mobile/files/upload-url`, uploads the file bytes directly to
+the returned private S3 URL using HTTP PUT, then calls
+`POST /api/v1/mobile/files/{fileId}/complete`. PostgreSQL stores metadata
+and the object key only.
 
 ------------------------------------------------------------------------
 
@@ -686,6 +676,8 @@ Important security rules:
 -   Use signed URLs for controlled access.
 -   Store secrets in environment variables/secret management.
 -   Use HTTPS in production.
+-   Keep Aadhaar values out of logs and persist only a keyed HMAC digest.
+-   Set a stable `IDENTITY_HASH_KEY` and private Neon Object Storage bucket/credentials in production (`NEON_STORAGE_ENDPOINT`, `NEON_STORAGE_REGION`, `NEON_STORAGE_BUCKET`, `NEON_STORAGE_ACCESS_KEY_ID`, and `NEON_STORAGE_SECRET_ACCESS_KEY`).
 
 ------------------------------------------------------------------------
 
