@@ -106,7 +106,7 @@ public class DataExportService {
                     PageRequest.of(pageNumber++, pageable.getPageSize(), pageable.getSort()));
             for (Vendor vendor : page.getContent()) {
                 ensureLimit(row);
-                append(sheet, row++, vendor.getId(), vendor.getName(), vendor.getContactPerson(),
+                append(sheet, row++, vendor.getVendorCode(), vendor.getName(), vendor.getContactPerson(),
                         vendor.getMobile(), vendor.getEmail(), vendor.getStatus(), vendor.getCreatedAt());
             }
         } while (page.hasNext());
@@ -114,7 +114,7 @@ public class DataExportService {
 
     private void writeAgents(SXSSFWorkbook workbook, DataQuery query, boolean ignoreUnsupportedStatus) {
         Sheet sheet = workbook.createSheet("Agents");
-        header(sheet, "ID", "User ID", "Vendor ID", "Vendor", "Full name", "Mobile", "Status", "Created at");
+        header(sheet, "ID",   "Vendor ID", "Vendor", "Full name", "Mobile", "Status", "Created at");
         int row = 1;
         int pageNumber = 0;
         Page<VendorAgent> page;
@@ -127,7 +127,7 @@ public class DataExportService {
                     PageRequest.of(pageNumber++, pageable.getPageSize(), pageable.getSort()));
             for (VendorAgent agent : page.getContent()) {
                 ensureLimit(row);
-                append(sheet, row++, agent.getId(), agent.getUser().getId(), agent.getVendor().getId(),
+                append(sheet, row++, agent.getAgentCode(),   agent.getVendor().getVendorCode(),
                         agent.getVendor().getName(), agent.getFullName(), agent.getUser().getMobile(),
                         agent.getStatus(), agent.getCreatedAt());
             }
@@ -136,8 +136,8 @@ public class DataExportService {
 
     private void writeFarmers(SXSSFWorkbook workbook, DataQuery query) {
         Sheet sheet = workbook.createSheet("Farmers");
-        header(sheet, "ID", "Customer code", "Full name", "Mobile", "Address", "District", "Taluka",
-                "Village", "Agent ID", "Created at");
+        header(sheet, "ID",   "Full name", "Mobile", "Address", "District", "Taluka",
+                "Village", "Created By", "Created at");
         int row = 1;
         int pageNumber = 0;
         Page<Farmer> page;
@@ -150,9 +150,9 @@ public class DataExportService {
                     PageRequest.of(pageNumber++, pageable.getPageSize(), pageable.getSort()));
             for (Farmer farmer : page.getContent()) {
                 ensureLimit(row);
-                append(sheet, row++, farmer.getId(), farmer.getCustomerCode(), farmer.getFullName(),
+                append(sheet, row++,  farmer.getCustomerCode(), farmer.getFullName(),
                         farmer.getMobile(), farmer.getAddress(), farmer.getDistrict(), farmer.getTaluka(),
-                        farmer.getVillage(), farmer.getCreatedBy() == null ? null : farmer.getCreatedBy().getId(),
+                        farmer.getVillage(), farmer.getCreatedBy() == null ? null : farmer.getCreatedBy().getAgentCode(),
                         farmer.getCreatedAt());
             }
         } while (page.hasNext());
@@ -174,7 +174,7 @@ public class DataExportService {
                     PageRequest.of(pageNumber++, pageable.getPageSize(), pageable.getSort()));
             for (PolicyPlan plan : page.getContent()) {
                 ensureLimit(row);
-                append(sheet, row++, plan.getId(), plan.getName(), plan.getDescription(),
+                append(sheet, row++, plan.getPlanCode(), plan.getName(), plan.getDescription(),
                         plan.getDurationMonths(), plan.getPrice(), plan.getGstPercentage(),
                         plan.getTermsAndConditions(), plan.getStatus(), plan.getCreatedAt());
             }
@@ -183,7 +183,7 @@ public class DataExportService {
 
     private void writePolicies(SXSSFWorkbook workbook, DataQuery query, boolean ignoreUnsupportedStatus) {
         Sheet sheet = workbook.createSheet("Policies");
-        header(sheet, "ID", "Policy number", "Farmer ID", "Farmer", "Plan ID", "Plan", "Vendor ID",
+        header(sheet,   "Policy number", "Farmer ID", "Farmer", "Plan ID", "Plan", "Vendor ID",
                 "Start date", "End date", "Amount", "GST", "Total amount", "Pump power (HP)",
                 "Motor head (meters)", "Status", "Created at");
         int row = 1;
@@ -198,9 +198,9 @@ public class DataExportService {
                     PageRequest.of(pageNumber++, pageable.getPageSize(), pageable.getSort()));
             for (Policy policy : page.getContent()) {
                 ensureLimit(row);
-                append(sheet, row++, policy.getId(), policy.getPolicyNumber(), policy.getFarmer().getId(),
-                        policy.getFarmer().getFullName(), policy.getPlan().getId(), policy.getPlan().getName(),
-                        policy.getVendor().getId(), policy.getStartDate(), policy.getEndDate(),
+                append(sheet, row++,   policy.getPolicyNumber(), policy.getFarmer().getCustomerCode(),
+                        policy.getFarmer().getFullName(), policy.getPlan().getPlanCode(), policy.getPlan().getName(),
+                        policy.getVendor().getVendorCode(), policy.getStartDate(), policy.getEndDate(),
                         policy.getAmount(), policy.getGstAmount(), policy.getTotalAmount(),
                         policy.getPumpPowerHp(), policy.getMotorHeadMeters(), policy.getStatus(),
                         policy.getCreatedAt());

@@ -41,12 +41,24 @@ public class PolicyController {
     @GetMapping("/{id}")
     public PolicyResponse get(@PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal principal) {
+
         return service.get(id, principal);
     }
 
     @PostMapping
     public ResponseEntity<PolicyResponse> create(@Valid @RequestBody PolicyRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
+        System.out.println("\n========== POLICY CREATE REQUEST ==========");
+        System.out.println("Farmer ID       : " + request.farmerId());
+        System.out.println("Policy Plan ID  : " + request.policyPlanId());
+        System.out.println("Start Date      : " + request.startDate());
+        System.out.println("Vendor ID       : " + request.vendorId());
+        System.out.println("Agent ID        : " + request.agentId());
+        System.out.println("Pump Power (HP) : " + request.pumpPowerHp());
+        System.out.println("Motor Head (m)  : " + request.motorHeadMeters());
+        System.out.println("Authenticated Role: " + principal.role());
+        System.out.println("Authenticated Vendor ID: " + principal.vendorId());
+        System.out.println("============================================\n");
         PolicyResponse created = service.create(request, principal);
         return ResponseEntity.created(URI.create("/api/v1/policies/" + created.id())).body(created);
     }

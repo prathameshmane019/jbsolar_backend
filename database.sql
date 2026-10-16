@@ -1,232 +1,232 @@
-CREATE TABLE "users"(
-    "id" UUID NOT NULL,
-    "mobile" VARCHAR(20) NOT NULL,
-    "password_hash" TEXT NOT NULL,
-    "role" VARCHAR(255) CHECK
-        ("role" IN('ADMIN', 'VENDOR_AGENT')) NOT NULL,
-        "status" VARCHAR(255)
-    CHECK
-        (
-            "status" IN('ACTIVE', 'INACTIVE', 'BLOCKED')
-        ) NOT NULL DEFAULT 'ACTIVE',
-        "last_login_at" TIMESTAMP(0) WITHOUT TIME ZONE NULL,
-        "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+
+CREATE SEQUENCE IF NOT EXISTS vendor_code_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO CYCLE;
+
+CREATE SEQUENCE IF NOT EXISTS agent_code_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO CYCLE;
+
+CREATE SEQUENCE IF NOT EXISTS plan_code_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO CYCLE;
+
+CREATE SEQUENCE IF NOT EXISTS farmer_code_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO CYCLE;
+
+CREATE SEQUENCE IF NOT EXISTS policy_number_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO CYCLE;
+
+CREATE SEQUENCE IF NOT EXISTS payment_number_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO CYCLE;
+
+CREATE SEQUENCE IF NOT EXISTS invoice_number_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO CYCLE;
+-- Auto-update updated_at
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---------------------------------------------------------------------
+CREATE TABLE users (
+                       id            UUID PRIMARY KEY,
+                       mobile        VARCHAR(20)  NOT NULL UNIQUE,
+                       password_hash TEXT         NOT NULL,
+                       role          VARCHAR(255) NOT NULL CHECK (role IN ('ADMIN', 'VENDOR_AGENT')),
+                       status        VARCHAR(255) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE', 'BLOCKED')),
+                       last_login_at TIMESTAMP(0) NULL,
+                       created_at    TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                       updated_at    TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-ALTER TABLE
-    "users" ADD PRIMARY KEY("id");
-ALTER TABLE
-    "users" ADD CONSTRAINT "users_mobile_unique" UNIQUE("mobile");
-CREATE TABLE "vendors"(
-    "id" UUID NOT NULL,
-    "name" VARCHAR(150) NOT NULL,
-    "contact_person" VARCHAR(100) NULL,
-    "mobile" VARCHAR(20) NULL,
-    "email" VARCHAR(150) NULL,
-    "status" VARCHAR(255) CHECK
-        ("status" IN('ACTIVE', 'INACTIVE')) NOT NULL DEFAULT 'ACTIVE',
-        "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "deleted_at" TIMESTAMP(0) WITHOUT TIME ZONE NULL
+
+-- ---------------------------------------------------------------------
+CREATE SEQUENCE IF NOT EXISTS vendor_code_seq
+    START WITH 1
+    INCREMENT BY 1;
+
+CREATE TABLE vendors (
+                         id             UUID PRIMARY KEY,
+                         vendor_code    VARCHAR(30) NOT NULL UNIQUE
+                                                              DEFAULT 'VND-' || lpad(nextval('vendor_code_seq')::text, 4, '0'),
+                         name           VARCHAR(150) NOT NULL,
+                         contact_person VARCHAR(100),
+                         mobile         VARCHAR(20),
+                         email          VARCHAR(150),
+                         status         VARCHAR(255) NOT NULL DEFAULT 'ACTIVE'
+                             CHECK (status IN ('ACTIVE', 'INACTIVE')),
+                         created_at     TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                         updated_at     TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                         deleted_at     TIMESTAMP(0)
 );
-ALTER TABLE
-    "vendors" ADD PRIMARY KEY("id");
-CREATE INDEX "vendors_deleted_at_index" ON
-    "vendors"("deleted_at");
-CREATE TABLE "vendor_agents"(
-    "id" UUID NOT NULL,
-    "user_id" UUID NOT NULL,
-    "vendor_id" UUID NOT NULL,
-    "full_name" VARCHAR(150) NOT NULL,
-    "status" VARCHAR(255) CHECK
-        ("status" IN('ACTIVE', 'INACTIVE')) NOT NULL DEFAULT 'ACTIVE',
-        "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "deleted_at" TIMESTAMP(0) WITHOUT TIME ZONE NULL
+-- ---------------------------------------------------------------------
+CREATE TABLE vendor_agents (
+                               id         UUID PRIMARY KEY,
+                               agent_code VARCHAR(30)  NOT NULL UNIQUE
+                                                                DEFAULT 'AGT-' || lpad(nextval('agent_code_seq')::text, 4, '0'),
+                               user_id    UUID         NOT NULL UNIQUE REFERENCES users(id),
+                               vendor_id  UUID         NOT NULL REFERENCES vendors(id),
+                               full_name  VARCHAR(150) NOT NULL,
+                               status     VARCHAR(255) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
+                               created_at TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                               updated_at TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                               deleted_at TIMESTAMP(0) NULL
 );
-ALTER TABLE
-    "vendor_agents" ADD PRIMARY KEY("id");
-ALTER TABLE
-    "vendor_agents" ADD CONSTRAINT "vendor_agents_user_id_unique" UNIQUE("user_id");
-CREATE INDEX "vendor_agents_vendor_id_index" ON
-    "vendor_agents"("vendor_id");
-CREATE INDEX "vendor_agents_deleted_at_index" ON
-    "vendor_agents"("deleted_at");
-CREATE TABLE "farmers"(
-    "id" UUID NOT NULL,
-    "customer_code" VARCHAR(50) NOT NULL,
-    "full_name" VARCHAR(150) NOT NULL,
-    "mobile" VARCHAR(20) NOT NULL,
-    "aadhaar_hash" VARCHAR(64) NULL,
-    "address" TEXT NULL,
-    "district" VARCHAR(100) NULL,
-    "taluka" VARCHAR(100) NULL,
-    "village" VARCHAR(100) NULL,
-    "created_by" UUID NULL,
-    "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deleted_at" TIMESTAMP(0) WITHOUT TIME ZONE NULL
+CREATE INDEX vendor_agents_vendor_id_index  ON vendor_agents (vendor_id);
+CREATE INDEX vendor_agents_deleted_at_index ON vendor_agents (deleted_at);
+
+-- ---------------------------------------------------------------------
+-- Aadhaar: stored reversibly so it can be shown/used when needed.
+--   aadhaar_encrypted : encrypt in the app (AES-256-GCM, key in env/KMS, NOT in DB)
+--   aadhaar_last4     : plain last 4 digits for display/search (e.g. XXXX XXXX 1234)
+-- No unique constraint on the encrypted value (encryption is randomized).
+-- ---------------------------------------------------------------------
+CREATE TABLE farmers (
+                         id                UUID PRIMARY KEY,
+                         farmer_code     VARCHAR(50)  NOT NULL UNIQUE
+                                                                 DEFAULT 'FM-' || to_char(CURRENT_DATE, 'YYYY') || '-' || lpad(nextval('farmer_code_seq')::text, 6, '0'),
+                         full_name         VARCHAR(150) NOT NULL,
+                         mobile            VARCHAR(20)  NOT NULL,
+                         aadhaar_hash  VARCHAR(64)  NULL,
+                         address           TEXT         NULL,
+                         district          VARCHAR(100) NULL,
+                         taluka            VARCHAR(100) NULL,
+                         village           VARCHAR(100) NULL,
+                         created_by        UUID         NULL REFERENCES vendor_agents(id),
+                         created_at        TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                         updated_at        TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                         deleted_at        TIMESTAMP(0) NULL
 );
-ALTER TABLE
-    "farmers" ADD PRIMARY KEY("id");
-ALTER TABLE
-    "farmers" ADD CONSTRAINT "farmers_customer_code_unique" UNIQUE("customer_code");
-CREATE INDEX "farmers_mobile_index" ON
-    "farmers"("mobile");
-CREATE INDEX "farmers_created_by_index" ON
-    "farmers"("created_by");
-CREATE INDEX "farmers_deleted_at_index" ON
-    "farmers"("deleted_at");
-CREATE UNIQUE INDEX "farmers_aadhaar_hash_unique" ON
-    "farmers"("aadhaar_hash");
-CREATE INDEX "farmers_created_by_deleted_at_index" ON
-    "farmers"("created_by", "deleted_at");
-CREATE TABLE "stored_files"(
-    "id" UUID NOT NULL,
-    "resource_type" VARCHAR(30) NOT NULL CHECK ("resource_type" IN('FARMER', 'POLICY')),
-    "resource_id" UUID NOT NULL,
-    "purpose" VARCHAR(30) NULL CHECK ("purpose" IN('FARMER_DOCUMENT', 'CUSTOMER_SIGNATURE', 'PUMP_SET_IMAGE')),
-    "storage_key" VARCHAR(500) NOT NULL,
-    "original_filename" VARCHAR(255) NOT NULL,
-    "content_type" VARCHAR(100) NOT NULL,
-    "file_size" BIGINT NOT NULL CHECK ("file_size" BETWEEN 1 AND 10485760),
-    "created_by" UUID NOT NULL,
-    "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "uploaded_at" TIMESTAMP(0) WITHOUT TIME ZONE NULL
+CREATE INDEX farmers_mobile_index              ON farmers (mobile);
+CREATE INDEX farmers_created_by_deleted_at_idx ON farmers (created_by, deleted_at);
+CREATE INDEX farmers_deleted_at_index          ON farmers (deleted_at);
+
+-- ---------------------------------------------------------------------
+CREATE TABLE stored_files (
+                              id                UUID PRIMARY KEY,
+                              resource_type     VARCHAR(30)  NOT NULL CHECK (resource_type IN ('FARMER', 'POLICY')),
+                              resource_id       UUID         NOT NULL,
+                              purpose           VARCHAR(30)  NULL CHECK (purpose IN ('FARMER_DOCUMENT', 'CUSTOMER_SIGNATURE', 'PUMP_SET_IMAGE')),
+                              storage_key       VARCHAR(500) NOT NULL UNIQUE,
+                              original_filename VARCHAR(255) NOT NULL,
+                              content_type      VARCHAR(100) NOT NULL,
+                              file_size         BIGINT       NOT NULL CHECK (file_size BETWEEN 1 AND 10485760),
+                              created_by        UUID         NOT NULL REFERENCES vendor_agents(id),
+                              created_at        TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                              uploaded_at       TIMESTAMP(0) NULL
 );
-ALTER TABLE "stored_files" ADD PRIMARY KEY("id");
-ALTER TABLE "stored_files" ADD CONSTRAINT "stored_files_storage_key_unique" UNIQUE("storage_key");
-CREATE INDEX "stored_files_resource_index" ON
-    "stored_files"("resource_type", "resource_id", "created_by", "uploaded_at");
-CREATE TABLE "policy_plans"(
-    "id" UUID NOT NULL,
-    "name" VARCHAR(150) NOT NULL,
-    "description" TEXT NULL,
-    "duration_months" INTEGER NOT NULL,
-    "price" DECIMAL(12, 2) NOT NULL,
-    "gst_percentage" DECIMAL(5, 2) NOT NULL,
-    "terms_and_conditions" TEXT NULL,
-    "status" VARCHAR(255) CHECK
-        ("status" IN('ACTIVE', 'INACTIVE')) NOT NULL DEFAULT 'ACTIVE',
-        "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "deleted_at" TIMESTAMP(0) WITHOUT TIME ZONE NULL
+CREATE INDEX stored_files_resource_index ON stored_files (resource_type, resource_id, created_by, uploaded_at);
+
+-- ---------------------------------------------------------------------
+CREATE TABLE policy_plans (
+                              id                   UUID PRIMARY KEY,
+                              plan_code            VARCHAR(30)  NOT NULL UNIQUE
+                                                                         DEFAULT 'PLN-' || lpad(nextval('plan_code_seq')::text, 4, '0'),
+                              name                 VARCHAR(150) NOT NULL,
+                              description          TEXT NULL,
+                              duration_months      INTEGER      NOT NULL CHECK (duration_months > 0),
+                              price                NUMERIC(12,2) NOT NULL CHECK (price >= 0),
+                              gst_percentage       NUMERIC(5,2)  NOT NULL CHECK (gst_percentage BETWEEN 0 AND 100),
+                              terms_and_conditions TEXT NULL,
+                              status               VARCHAR(255) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
+                              created_at           TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                              updated_at           TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                              deleted_at           TIMESTAMP(0) NULL
 );
-ALTER TABLE
-    "policy_plans" ADD PRIMARY KEY("id");
-CREATE INDEX "policy_plans_deleted_at_index" ON
-    "policy_plans"("deleted_at");
-CREATE TABLE "policies"(
-    "id" UUID NOT NULL,
-    "policy_number" VARCHAR(50) NOT NULL,
-    "farmer_id" UUID NOT NULL,
-    "policy_plan_id" UUID NOT NULL,
-    "start_date" DATE NOT NULL,
-    "end_date" DATE NOT NULL,
-    "amount" DECIMAL(12, 2) NOT NULL,
-    "gst_amount" DECIMAL(12, 2) NOT NULL,
-    "total_amount" DECIMAL(12, 2) NOT NULL,
-    "pump_power_hp" NUMERIC(8, 2) NULL,
-    "motor_head_meters" NUMERIC(8, 2) NULL,
-    "status" VARCHAR(255) CHECK
-        (
-            "status" IN(
-                'PENDING',
-                'ACTIVE',
-                'EXPIRED',
-                'CANCELLED'
-            )
-        ) NOT NULL DEFAULT 'PENDING',
-        "purchased_at" TIMESTAMP(0) WITHOUT TIME ZONE NULL,
-        "created_by" UUID NULL,
-        "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "vendor_id" UUID NOT NULL,
-        "deleted_at" TIMESTAMP(0) WITHOUT TIME ZONE NULL
+CREATE INDEX policy_plans_deleted_at_index ON policy_plans (deleted_at);
+
+-- ---------------------------------------------------------------------
+CREATE TABLE policies (
+                          id                UUID PRIMARY KEY,
+                          policy_number     VARCHAR(50)  NOT NULL UNIQUE
+                                                                  DEFAULT 'PLC-' || to_char(CURRENT_DATE, 'YYYY') || '-' || lpad(nextval('policy_number_seq')::text, 6, '0'),
+                          farmer_id         UUID NOT NULL REFERENCES farmers(id),
+                          policy_plan_id    UUID NOT NULL REFERENCES policy_plans(id),
+                          vendor_id         UUID NOT NULL REFERENCES vendors(id),
+                          start_date        DATE NOT NULL,
+                          end_date          DATE NOT NULL,
+                          amount            NUMERIC(12,2) NOT NULL CHECK (amount >= 0),
+                          gst_amount        NUMERIC(12,2) NOT NULL CHECK (gst_amount >= 0),
+                          total_amount      NUMERIC(12,2) NOT NULL,
+                          pump_power_hp     NUMERIC(8,2) NULL,
+                          motor_head_meters NUMERIC(8,2) NULL,
+                          status            VARCHAR(255) NOT NULL DEFAULT 'PENDING'
+                              CHECK (status IN ('PENDING', 'ACTIVE', 'EXPIRED', 'CANCELLED')),
+                          purchased_at      TIMESTAMP(0) NULL,
+                          created_by        UUID NULL REFERENCES vendor_agents(id),
+                          created_at        TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                          updated_at        TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                          deleted_at        TIMESTAMP(0) NULL,
+                          CONSTRAINT policies_dates_chk CHECK (end_date > start_date),
+                          CONSTRAINT policies_total_chk CHECK (total_amount = amount + gst_amount)
 );
-ALTER TABLE
-    "policies" ADD PRIMARY KEY("id");
-ALTER TABLE
-    "policies" ADD CONSTRAINT "policies_policy_number_unique" UNIQUE("policy_number");
-CREATE INDEX "policies_farmer_id_index" ON
-    "policies"("farmer_id");
-CREATE INDEX "policies_policy_plan_id_index" ON
-    "policies"("policy_plan_id");
-CREATE INDEX "policies_status_index" ON
-    "policies"("status");
-CREATE INDEX "policies_created_by_index" ON
-    "policies"("created_by");
-CREATE INDEX "policies_deleted_at_index" ON
-    "policies"("deleted_at");
-CREATE TABLE "payments"(
-    "id" UUID NOT NULL,
-    "policy_id" UUID NOT NULL,
-    "payment_number" VARCHAR(50) NOT NULL,
-    "gateway" VARCHAR(50) NOT NULL,
-    "gateway_order_id" VARCHAR(150) NOT NULL,
-    "gateway_payment_id" VARCHAR(150) NULL,
-    "amount" DECIMAL(12, 2) NOT NULL,
-    "payment_method" VARCHAR(50) NULL,
-    "status" VARCHAR(255) CHECK
-        (
-            "status" IN(
-                'PENDING',
-                'SUCCESS',
-                'FAILED',
-                'REFUNDED'
-            )
-        ) NOT NULL DEFAULT 'PENDING',
-        "paid_at" TIMESTAMP(0) WITHOUT TIME ZONE NULL,
-        "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE INDEX policies_farmer_id_index      ON policies (farmer_id);
+CREATE INDEX policies_policy_plan_id_index ON policies (policy_plan_id);
+CREATE INDEX policies_vendor_status_index  ON policies (vendor_id, status);
+CREATE INDEX policies_created_by_index     ON policies (created_by);
+CREATE INDEX policies_deleted_at_index     ON policies (deleted_at);
+
+-- ---------------------------------------------------------------------
+CREATE TABLE payments (
+                          id                 UUID PRIMARY KEY,
+                          payment_number     VARCHAR(50)  NOT NULL UNIQUE
+                                                                   DEFAULT 'PAY-' || to_char(CURRENT_DATE, 'YYYY') || '-' || lpad(nextval('payment_number_seq')::text, 6, '0'),
+                          policy_id          UUID NOT NULL REFERENCES policies(id),
+                          gateway            VARCHAR(50)  NOT NULL,
+                          gateway_order_id   VARCHAR(150) NOT NULL,
+                          gateway_payment_id VARCHAR(150) NULL,
+                          amount             NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+                          payment_method     VARCHAR(50)  NULL,
+                          status             VARCHAR(255) NOT NULL DEFAULT 'PENDING'
+                              CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED', 'REFUNDED')),
+                          paid_at            TIMESTAMP(0) NULL,
+                          created_at         TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                          updated_at         TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-ALTER TABLE
-    "payments" ADD PRIMARY KEY("id");
-CREATE INDEX "payments_policy_id_index" ON
-    "payments"("policy_id");
-ALTER TABLE
-    "payments" ADD CONSTRAINT "payments_payment_number_unique" UNIQUE("payment_number");
-CREATE INDEX "payments_status_index" ON
-    "payments"("status");
-CREATE TABLE "invoices"(
-    "id" UUID NOT NULL,
-    "invoice_number" VARCHAR(50) NOT NULL,
-    "policy_id" UUID NOT NULL,
-    "payment_id" UUID NOT NULL,
-    "invoice_date" DATE NOT NULL,
-    "amount" DECIMAL(12, 2) NOT NULL,
-    "gst_amount" DECIMAL(12, 2) NOT NULL,
-    "total_amount" DECIMAL(12, 2) NOT NULL,
-    "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE INDEX payments_policy_status_index ON payments (policy_id, status);
+CREATE UNIQUE INDEX payments_gateway_order_unique ON payments (gateway, gateway_order_id);
+CREATE UNIQUE INDEX payments_gateway_payment_unique ON payments (gateway, gateway_payment_id)
+    WHERE gateway_payment_id IS NOT NULL;
+
+-- ---------------------------------------------------------------------
+CREATE TABLE invoices (
+                          id             UUID PRIMARY KEY,
+                          invoice_number VARCHAR(50)  NOT NULL UNIQUE
+                                                               DEFAULT 'INV-' || to_char(CURRENT_DATE, 'YYYY') || '-' || lpad(nextval('invoice_number_seq')::text, 6, '0'),
+                          policy_id      UUID NOT NULL UNIQUE REFERENCES policies(id),
+                          payment_id     UUID NOT NULL UNIQUE REFERENCES payments(id),
+                          invoice_date   DATE NOT NULL,
+                          amount         NUMERIC(12,2) NOT NULL,
+                          gst_amount     NUMERIC(12,2) NOT NULL,
+                          total_amount   NUMERIC(12,2) NOT NULL,
+                          created_at     TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                          CONSTRAINT invoices_total_chk CHECK (total_amount = amount + gst_amount)
 );
-ALTER TABLE
-    "invoices" ADD PRIMARY KEY("id");
-ALTER TABLE
-    "invoices" ADD CONSTRAINT "invoices_invoice_number_unique" UNIQUE("invoice_number");
-CREATE INDEX "invoices_policy_id_index" ON
-    "invoices"("policy_id");
-CREATE INDEX "invoices_payment_id_index" ON
-    "invoices"("payment_id");
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_policy_id_unique" UNIQUE("policy_id");
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_payment_id_unique" UNIQUE("payment_id");
-ALTER TABLE
-    "policies" ADD CONSTRAINT "policies_policy_plan_id_foreign" FOREIGN KEY("policy_plan_id") REFERENCES "policy_plans"("id");
-ALTER TABLE
-    "vendor_agents" ADD CONSTRAINT "vendor_agents_vendor_id_foreign" FOREIGN KEY("vendor_id") REFERENCES "vendors"("id");
-ALTER TABLE
-    "invoices" ADD CONSTRAINT "invoices_policy_id_foreign" FOREIGN KEY("policy_id") REFERENCES "policies"("id");
-ALTER TABLE
-    "policies" ADD CONSTRAINT "policies_farmer_id_foreign" FOREIGN KEY("farmer_id") REFERENCES "farmers"("id");
-ALTER TABLE
-    "policies" ADD CONSTRAINT "policies_vendor_id_foreign" FOREIGN KEY("vendor_id") REFERENCES "vendors"("id");
-ALTER TABLE
-    "vendor_agents" ADD CONSTRAINT "vendor_agents_user_id_foreign" FOREIGN KEY("user_id") REFERENCES "users"("id");
-ALTER TABLE
-    "invoices" ADD CONSTRAINT "invoices_payment_id_foreign" FOREIGN KEY("payment_id") REFERENCES "payments"("id");
-ALTER TABLE
-    "payments" ADD CONSTRAINT "payments_policy_id_foreign" FOREIGN KEY("policy_id") REFERENCES "policies"("id");
-ALTER TABLE
-    "policies" ADD CONSTRAINT "policies_created_by_foreign" FOREIGN KEY("created_by") REFERENCES "vendor_agents"("id");
-ALTER TABLE
-    "farmers" ADD CONSTRAINT "farmers_created_by_foreign" FOREIGN KEY("created_by") REFERENCES "vendor_agents"("id");
-ALTER TABLE "stored_files" ADD CONSTRAINT "stored_files_created_by_foreign" FOREIGN KEY("created_by") REFERENCES "vendor_agents"("id");
+
+-- ---------------------------------------------------------------------
+-- updated_at triggers
+-- ---------------------------------------------------------------------
+DO $$
+DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY['users','vendors','vendor_agents','farmers','policy_plans','policies','payments']
+    LOOP
+        EXECUTE format(
+            'CREATE TRIGGER %I BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION set_updated_at()',
+            t || '_set_updated_at', t);
+END LOOP;
+END $$;

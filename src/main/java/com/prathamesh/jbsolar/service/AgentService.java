@@ -150,7 +150,7 @@ public class AgentService {
     @Transactional(readOnly = true)
     public PageResponse<AgentResponse> search(DataQuery query, UserPrincipal principal) {
         Specification<VendorAgent> specification = DataQuerySupport.specification(query,
-                        List.of("fullName", "user.mobile", "vendor.name"), true, "vendor.id", false);
+                        List.of("fullName","agentCode", "user.mobile", "vendor.name"), true, "vendor.id", false);
         if (principal.role() != UserRole.ADMIN) {
             if (principal.role() != UserRole.VENDOR_AGENT || principal.agentId() == null) {
                 throw new AccessDeniedException("Agent profile is required");
@@ -159,7 +159,7 @@ public class AgentService {
                     builder.equal(root.get("id"), principal.agentId()));
         }
         var page = agents.findAll(specification, DataQuerySupport.pageable(query,
-                        Set.of("fullName", "user.mobile", "vendor.name", "status", "createdAt", "updatedAt")));
+                        Set.of("fullName","agentCode", "user.mobile", "vendor.name", "status", "createdAt", "updatedAt")));
         return PageResponse.from(page.map(this::toResponse));
     }
 
@@ -193,12 +193,15 @@ public class AgentService {
 
         return new AgentResponse(
                 agent.getId(),
+                agent.getAgentCode(),
                 agent.getUser().getId(),
                 agent.getVendor().getId(),
                 agent.getVendor().getName(),
                 agent.getFullName(),
                 agent.getUser().getMobile(),
-                agent.getStatus()
+                agent.getStatus(),
+                agent.getVendor().getVendorCode()
+
         );
     }
 }

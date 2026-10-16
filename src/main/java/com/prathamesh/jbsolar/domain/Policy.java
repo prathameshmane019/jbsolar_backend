@@ -22,52 +22,115 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "policies", indexes = @Index(name = "policies_deleted_at_index", columnList = "deleted_at"))
+@Table(
+        name = "policies",
+        indexes = {
+                @Index(
+                        name = "policies_deleted_at_index",
+                        columnList = "deleted_at"
+                )
+        }
+)
 @Data
 public class Policy {
-    @Id @UuidGenerator
+
+    @Id
+    @UuidGenerator
+    @Column(nullable = false, updatable = false)
     private UUID id;
-    @Column(name = "policy_number", nullable = false, unique = true, length = 50)
+
+    @Column(
+            name = "policy_number",
+            nullable = false,
+            unique = true,
+            length = 50,
+            insertable = false,
+            updatable = false
+    )
     private String policyNumber;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "farmer_id", nullable = false)
     private Farmer farmer;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "policy_plan_id", nullable = false)
     private PolicyPlan plan;
+
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
+
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
-    @Column(name = "gst_amount", nullable = false, precision = 12, scale = 2)
+
+    @Column(
+            name = "gst_amount",
+            nullable = false,
+            precision = 12,
+            scale = 2
+    )
     private BigDecimal gstAmount;
-    @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
+
+    @Column(
+            name = "total_amount",
+            nullable = false,
+            precision = 12,
+            scale = 2
+    )
     private BigDecimal totalAmount;
+
     @Column(name = "pump_power_hp", precision = 8, scale = 2)
     private BigDecimal pumpPowerHp;
+
     @Column(name = "motor_head_meters", precision = 8, scale = 2)
     private BigDecimal motorHeadMeters;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private PolicyStatus status = PolicyStatus.PENDING;
+
     @Column(name = "purchased_at")
     private Instant purchasedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private VendorAgent createdBy;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "vendor_id", nullable = false)
     private Vendor vendor;
-    @Column(name = "created_at", nullable = false, updatable = false)
+
+    @Column(
+            name = "created_at",
+            nullable = false,
+            updatable = false
+    )
     private Instant createdAt;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
-    @PrePersist void onCreate() { createdAt = Instant.now(); updatedAt = createdAt; }
-    @PreUpdate void onUpdate() { updatedAt = Instant.now(); }
+    @PrePersist
+    void onCreate() {
+        Instant now = Instant.now();
 
+        if (createdAt == null) {
+            createdAt = now;
+        }
+
+        if (updatedAt == null) {
+            updatedAt = now;
+        }
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = Instant.now();
+    }
 }

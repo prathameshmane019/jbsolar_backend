@@ -62,9 +62,9 @@ public class PolicyPlanService {
                     RecordStatus.ACTIVE.name(), query.createdFrom(), query.createdTo(), query.vendorId());
         }
         var page = plans.findAll(DataQuerySupport.specification(query,
-                        List.of("name", "description", "termsAndConditions"), true, null, false),
+                        List.of("name", "planCode","description", "termsAndConditions"), true, null, false),
                 DataQuerySupport.pageable(query,
-                        Set.of("name", "price", "durationMonths", "gstPercentage", "status", "createdAt", "updatedAt")));
+                        Set.of("name", "price","planCode", "durationMonths", "gstPercentage", "status", "createdAt", "updatedAt")));
         return PageResponse.from(page.map(this::toResponse));
     }
 
@@ -98,7 +98,7 @@ public class PolicyPlanService {
         plan.setGstPercentage(request.gstPercentage()); plan.setTermsAndConditions(request.termsAndConditions());
     }
     private PolicyPlanResponse toResponse(PolicyPlan p) {
-        return new PolicyPlanResponse(p.getId(), p.getName(), p.getDescription(), p.getDurationMonths(), p.getPrice(),
+        return new PolicyPlanResponse(p.getId(),p.getPlanCode(), p.getName(), p.getDescription(), p.getDurationMonths(), p.getPrice(),
                 p.getGstPercentage(), p.getTermsAndConditions(), p.getStatus());
     }
 }
