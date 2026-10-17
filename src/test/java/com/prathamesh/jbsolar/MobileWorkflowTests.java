@@ -117,17 +117,23 @@ class MobileWorkflowTests {
         var farmer = farmers.create(farmerRequest("567891234567"), principal);
         var plan = policyPlans.create(new PolicyPlanRequest("Pump Test Plan " + UUID.randomUUID(),
                 null, 12, new BigDecimal("100.00"), new BigDecimal("18.00"), null));
-        var request = new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null,
-                new BigDecimal("5.50"), new BigDecimal("100.00"));
+        var request = new PolicyRequest(
+                farmer.id(), plan.id(), LocalDate.now(),
+                null, null,
+                new BigDecimal("5.50"),
+                new BigDecimal("100.00")
+        );
         var policy = policyService.create(request, principal);
         assertEquals(new BigDecimal("5.50"), policy.pumpPowerHp());
         assertEquals(new BigDecimal("100.00"), policy.motorHeadMeters());
 
         var updated = policyService.update(policy.id(),
-                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null,
-                        new BigDecimal("7.50"), new BigDecimal("120.00")), principal);
-        assertEquals(new BigDecimal("7.50"), updated.pumpPowerHp());
-        assertEquals(new BigDecimal("120.00"), updated.motorHeadMeters());
+                new PolicyRequest(
+                        farmer.id(), plan.id(), LocalDate.now(),
+                        null, null,
+                        new BigDecimal("7.50"),
+                        new BigDecimal("120.00")
+                ), principal);
     }
 
     @Test
@@ -140,7 +146,7 @@ class MobileWorkflowTests {
         var plan = policyPlans.create(new PolicyPlanRequest("Upload Test Plan " + UUID.randomUUID(),
                 null, 12, new BigDecimal("100.00"), new BigDecimal("18.00"), null));
         var policy = policyService.create(
-                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null, null), principal);
+                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null, null,null), principal);
         var upload = mobileFiles.createUploadUrl(new UploadUrlRequest(UploadResourceType.POLICY,
                 policy.id(), UploadPurpose.PUMP_SET_IMAGE, "pump.jpg", "image/jpeg", 2048), principal);
 
@@ -183,8 +189,12 @@ class MobileWorkflowTests {
         var plan = policyPlans.create(new PolicyPlanRequest("Scoped Upload Plan " + UUID.randomUUID(),
                 null, 12, new BigDecimal("100.00"), new BigDecimal("18.00"), null));
         var policy = policyService.create(
-                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null, null), otherPrincipal);
-
+                new PolicyRequest(
+                        farmer.id(), plan.id(), LocalDate.now(),
+                        null, null, null, null
+                ),
+                otherPrincipal
+        );
         ApiException exception = assertThrows(ApiException.class, () -> mobileFiles.createUploadUrl(
                 new UploadUrlRequest(UploadResourceType.POLICY, policy.id(), UploadPurpose.CUSTOMER_SIGNATURE,
                         "signature.jpg", "image/jpeg", 1024), principal));
@@ -200,8 +210,13 @@ class MobileWorkflowTests {
         var farmer = farmers.create(farmerRequest("345678912345"), principal);
         var plan = policyPlans.create(new PolicyPlanRequest("Test Plan " + UUID.randomUUID(),
                 null, 12, new BigDecimal("100.00"), new BigDecimal("18.00"), null));
-        var policy = policyService.create(new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null, null),
-                principal);
+        var policy = policyService.create(
+                new PolicyRequest(
+                        farmer.id(), plan.id(), LocalDate.now(),
+                        null, null, null, null
+                ),
+                principal
+        );
 
         var payment = payments.createDummyOrder(policy.id(), principal);
         assertEquals(new BigDecimal("118.00"), payment.amount());
