@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.UUID;
 
 import org.apache.poi.ss.usermodel.WorkbookFactory;
@@ -123,6 +124,17 @@ class DataLifecycleTests {
             var sheet = workbook.getSheet("Vendors");
             assertEquals(2, sheet.getPhysicalNumberOfRows());
             assertTrue(sheet.getRow(1).getCell(0).getStringCellValue().contains(inactive.id().toString()));
+        }
+    }
+
+    @Test
+    void excelExportCanWriteDirectlyToAnOutputStream() throws Exception {
+        var output = new ByteArrayOutputStream();
+        dataExportService.export("vendors", new DataQuery(null, null, null, null,
+                null, null, null, null, null), output);
+
+        try (var workbook = WorkbookFactory.create(new ByteArrayInputStream(output.toByteArray()))) {
+            assertEquals("Vendors", workbook.getSheetName(0));
         }
     }
 

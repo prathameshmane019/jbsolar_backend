@@ -6,4 +6,5 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import com.prathamesh.jbsolar.domain.Vendor;
 
 public interface VendorRepository extends JpaRepository<Vendor, UUID>, JpaSpecificationExecutor<Vendor> {
+    java.util.List<Vendor> findAllByDeletedAtIsNotNull();
 }

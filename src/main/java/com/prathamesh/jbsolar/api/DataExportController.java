@@ -6,6 +6,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,17 +31,18 @@ public class DataExportController {
     }
 
     @GetMapping
-    public ResponseEntity<byte[]> exportAll(@ModelAttribute DataQuery query) {
+    public ResponseEntity<StreamingResponseBody> exportAll(@ModelAttribute DataQuery query) {
         return respond("all", query);
     }
 
     @GetMapping("/{resource}")
-    public ResponseEntity<byte[]> export(@PathVariable String resource, @ModelAttribute DataQuery query) {
+    public ResponseEntity<StreamingResponseBody> export(@PathVariable String resource,
+            @ModelAttribute DataQuery query) {
         return respond(resource, query);
     }
 
-    private ResponseEntity<byte[]> respond(String resource, DataQuery query) {
-        byte[] content = service.export(resource, query);
+    private ResponseEntity<StreamingResponseBody> respond(String resource, DataQuery query) {
+        StreamingResponseBody content = output -> service.export(resource, query, output);
         String filename = "jbsolar-" + resource + "-" + LocalDate.now() + ".xlsx";
         return ResponseEntity.ok()
                 .contentType(XLSX)

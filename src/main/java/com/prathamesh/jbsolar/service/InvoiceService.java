@@ -36,10 +36,9 @@ public class InvoiceService {
         this.invoices = invoices;
         this.policies = policies;
     }
-
     public void createForPayment(Policy policy, Payment payment) {
         Invoice invoice = new Invoice();
-        invoice.setInvoiceNumber("JB-INV-" + UUID.randomUUID().toString()
+        invoice.setInvoiceNumber("INV-" + UUID.randomUUID().toString()
                 .substring(0, 12).toUpperCase(java.util.Locale.ROOT));
         invoice.setPolicy(policy);
         invoice.setPayment(payment);

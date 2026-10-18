@@ -22,6 +22,14 @@ Requirements: Java 21+ and PostgreSQL. Create a database named `jbsolar`, then s
 
 Run with `mvnw.cmd spring-boot:run` on Windows or `./mvnw spring-boot:run` on macOS/Linux. The app listens on port 8080 by default (`PORT` overrides it).
 
+## Runtime capacity and request limits
+
+The application uses a small default database pool (`DB_POOL_MAX_SIZE=5`, `DB_POOL_MIN_IDLE=1`, and a 20-second `DB_CONNECTION_TIMEOUT_MS`) and caps embedded Tomcat at 50 request threads and 100 connections. These defaults suit a small deployment; override them with the corresponding environment variables when sizing a larger instance. Hibernate batch-fetches lazy associations in groups of 32, and paged policy/agent results load their related entities together to avoid per-row database queries.
+
+API traffic is limited per application instance using fixed one-minute windows: 10 login attempts per client address, 120 requests per authenticated user, 60 requests per unauthenticated client address, and 2 exports per authenticated user. Rejected requests return `429 Too Many Requests` with `Retry-After`. The limiter keeps a bounded in-memory client table, so limits are per instance rather than shared across replicas; use a trusted edge gateway or distributed limiter when global limits are required. IP-based limits use the servlet remote address, so configure trusted proxy address forwarding at the edge if the application is behind a proxy that masks client addresses.
+
+Excel HTTP downloads stream the generated workbook to the response rather than buffering the complete file in application heap. Direct service calls used by tests and other in-process clients retain the byte-array export method.
+
 ## Deploy on Render
 
 1. Push this repository to GitHub, then in Render select **New > Blueprint** and connect the repository. Render reads [`render.yaml`](./render.yaml) to create the Docker web service and PostgreSQL database.

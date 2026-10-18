@@ -2,6 +2,7 @@ package com.prathamesh.jbsolar.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Set;
@@ -53,6 +54,13 @@ public class DataExportService {
 
     @Transactional(readOnly = true)
     public byte[] export(String requestedResource, DataQuery requestedQuery) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        export(requestedResource, requestedQuery, output);
+        return output.toByteArray();
+    }
+
+    @Transactional(readOnly = true)
+    public void export(String requestedResource, DataQuery requestedQuery, OutputStream output) {
         String resource = requestedResource == null ? "all" : requestedResource.toLowerCase(Locale.ROOT);
         DataQuery query = requestedQuery == null
                 ? new DataQuery(0, PAGE_SIZE, null, null, null, null, null, null, null)
@@ -63,8 +71,7 @@ public class DataExportService {
                     "All-data exports support sorting by createdAt, updatedAt, id, or status");
         }
         SXSSFWorkbook workbook = new SXSSFWorkbook(100);
-        try (workbook;
-                ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+        try (workbook) {
             workbook.setCompressTempFiles(true);
             switch (resource) {
                 case "all" -> {
@@ -84,7 +91,6 @@ public class DataExportService {
                         "Unsupported export resource: " + requestedResource);
             }
             workbook.write(output);
-            return output.toByteArray();
         } catch (IOException exception) {
             throw new IllegalStateException("Could not generate the Excel export", exception);
         } finally {

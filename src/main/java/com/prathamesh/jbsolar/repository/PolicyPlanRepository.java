@@ -9,4 +9,5 @@ import com.prathamesh.jbsolar.domain.RecordStatus;
 
 public interface PolicyPlanRepository extends JpaRepository<PolicyPlan, UUID>, JpaSpecificationExecutor<PolicyPlan> {
     List<PolicyPlan> findAllByStatus(RecordStatus status);
+    List<PolicyPlan> findAllByDeletedAtIsNotNull();
 }

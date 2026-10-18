@@ -50,16 +50,16 @@ public class RecycleBinService {
     @Transactional(readOnly = true)
     public List<RecycleBinEntry> list() {
         return Stream.of(
-                vendors.findAll().stream().filter(row -> row.getDeletedAt() != null)
+                vendors.findAllByDeletedAtIsNotNull().stream()
                         .map(row -> new RecycleBinEntry("vendors", row.getId(), row.getName(), row.getDeletedAt())),
-                agents.findAll().stream().filter(row -> row.getDeletedAt() != null)
+                agents.findAllByDeletedAtIsNotNull().stream()
                         .map(row -> new RecycleBinEntry("agents", row.getId(), row.getFullName(), row.getDeletedAt())),
-                farmers.findAll().stream().filter(row -> row.getDeletedAt() != null)
+                farmers.findAllByDeletedAtIsNotNull().stream()
                         .map(row -> new RecycleBinEntry("farmers", row.getId(),
                                 row.getCustomerCode() + " - " + row.getFullName(), row.getDeletedAt())),
-                plans.findAll().stream().filter(row -> row.getDeletedAt() != null)
+                plans.findAllByDeletedAtIsNotNull().stream()
                         .map(row -> new RecycleBinEntry("policy-plans", row.getId(), row.getName(), row.getDeletedAt())),
-                policies.findAll().stream().filter(row -> row.getDeletedAt() != null)
+                policies.findAllByDeletedAtIsNotNull().stream()
                         .map(row -> new RecycleBinEntry("policies", row.getId(), row.getPolicyNumber(), row.getDeletedAt())))
                 .flatMap(stream -> stream)
                 .sorted(Comparator.comparing(RecycleBinEntry::deletedAt).reversed())
