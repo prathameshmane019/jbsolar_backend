@@ -31,10 +31,12 @@ public class PolicyService {
     private final PolicyPlanRepository plans;
     private final VendorRepository vendors;
     private final VendorAgentRepository agents;
+    private final MobileFileService mobileFiles;
 
     public PolicyService(PolicyRepository policies, FarmerRepository farmers, PolicyPlanRepository plans,
-            VendorRepository vendors, VendorAgentRepository agents) {
-        this.policies = policies; this.farmers = farmers; this.plans = plans; this.vendors = vendors; this.agents = agents;
+            VendorRepository vendors, VendorAgentRepository agents, MobileFileService mobileFiles) {
+        this.policies = policies; this.farmers = farmers; this.plans = plans; this.vendors = vendors;
+        this.agents = agents; this.mobileFiles = mobileFiles;
     }
 
     public PolicyResponse create(PolicyRequest request, UserPrincipal principal) {
@@ -182,6 +184,7 @@ public class PolicyService {
         Policy policy = policies.findById(id).filter(row -> row.getDeletedAt() != null)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "deleted_policy_not_found",
                         "Deleted policy was not found"));
+        mobileFiles.deletePolicyFiles(id);
         policies.delete(policy);
     }
 

@@ -7,6 +7,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -84,6 +85,16 @@ class JbsolarApplicationTests {
 		assertEquals(200, loginResponse.statusCode());
 		String token = com.fasterxml.jackson.databind.json.JsonMapper.builder().build()
 				.readTree(loginResponse.body()).get("accessToken").asText();
+
+		HttpResponse<String> invoiceListResponse = HttpClient.newHttpClient().send(HttpRequest.newBuilder()
+				.uri(URI.create("http://localhost:" + port + "/api/v1/invoices?page=0&size=10"))
+				.header("Authorization", "Bearer " + token)
+				.GET().build(), HttpResponse.BodyHandlers.ofString());
+		assertEquals(200, invoiceListResponse.statusCode(), invoiceListResponse.body());
+		var invoicePage = com.fasterxml.jackson.databind.json.JsonMapper.builder().build()
+				.readTree(invoiceListResponse.body());
+		assertTrue(invoicePage.has("content"));
+		assertEquals(0, invoicePage.get("page").asInt());
 
 		HttpResponse<String> farmerResponse = HttpClient.newHttpClient().send(HttpRequest.newBuilder()
 				.uri(URI.create("http://localhost:" + port + "/api/v1/farmers/" + farmer.id()))

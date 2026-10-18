@@ -7,5 +7,6 @@ import com.prathamesh.jbsolar.domain.UploadResourceType;
 import com.prathamesh.jbsolar.domain.UploadPurpose;
 
 public record FileMetadataResponse(UUID id, UploadResourceType resourceType, UUID resourceId,
-        UploadPurpose purpose, String originalFilename, String contentType, long fileSize, Instant uploadedAt) {
+        UploadPurpose purpose, String originalFilename, String contentType, long fileSize, Instant uploadedAt,
+        String viewUrl, Instant viewUrlExpiresAt) {
 }

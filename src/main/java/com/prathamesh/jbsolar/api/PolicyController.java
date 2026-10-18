@@ -1,10 +1,12 @@
 package com.prathamesh.jbsolar.api;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -18,10 +20,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.prathamesh.jbsolar.api.dto.PolicyRequest;
 import com.prathamesh.jbsolar.api.dto.PolicyResponse;
+import com.prathamesh.jbsolar.api.dto.FileMetadataResponse;
 import com.prathamesh.jbsolar.api.dto.DataQuery;
 import com.prathamesh.jbsolar.api.dto.PageResponse;
 import com.prathamesh.jbsolar.security.UserPrincipal;
 import com.prathamesh.jbsolar.service.PolicyService;
+import com.prathamesh.jbsolar.service.MobileFileService;
 
 import jakarta.validation.Valid;
 
@@ -30,7 +34,17 @@ import jakarta.validation.Valid;
 @Validated
 public class PolicyController {
     private final PolicyService service;
-    public PolicyController(PolicyService service) { this.service = service; }
+    private final MobileFileService files;
+    public PolicyController(PolicyService service, MobileFileService files) {
+        this.service = service;
+        this.files = files;
+    }
+
+    @GetMapping("/{id}/files")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<FileMetadataResponse> files(@PathVariable UUID id) {
+        return files.listForPolicy(id);
+    }
 
     @GetMapping
     public PageResponse<PolicyResponse> list(@ModelAttribute DataQuery query,

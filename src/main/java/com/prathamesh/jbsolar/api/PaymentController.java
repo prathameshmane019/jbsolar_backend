@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.prathamesh.jbsolar.api.dto.InvoiceResponse;
 import com.prathamesh.jbsolar.api.dto.PaymentResponse;
 import com.prathamesh.jbsolar.security.UserPrincipal;
+import com.prathamesh.jbsolar.service.InvoiceService;
 import com.prathamesh.jbsolar.service.PaymentService;
 
 @RestController
@@ -22,9 +23,11 @@ import com.prathamesh.jbsolar.service.PaymentService;
 @PreAuthorize("hasAnyRole('ADMIN', 'VENDOR_AGENT')")
 public class PaymentController {
     private final PaymentService payments;
+    private final InvoiceService invoices;
 
-    public PaymentController(PaymentService payments) {
+    public PaymentController(PaymentService payments, InvoiceService invoices) {
         this.payments = payments;
+        this.invoices = invoices;
     }
 
     @PostMapping("/policies/{policyId}/payments/dummy-order")
@@ -43,12 +46,7 @@ public class PaymentController {
     @GetMapping("/policies/{policyId}/invoice")
     public InvoiceResponse getInvoiceForPolicy(@PathVariable UUID policyId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        return payments.getInvoiceForPolicy(policyId, principal);
+        return invoices.getForPolicy(policyId, principal);
     }
 
-    @GetMapping("/invoices/{invoiceId}")
-    public InvoiceResponse getInvoice(@PathVariable UUID invoiceId,
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return payments.getInvoice(invoiceId, principal);
-    }
 }

@@ -13,10 +13,10 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 @Configuration
-@EnableConfigurationProperties(NeonStorageProperties.class)
+@EnableConfigurationProperties(ObjectStorageProperties.class)
 public class ObjectStorageConfig {
     @Bean
-    S3Client s3Client(NeonStorageProperties properties) {
+    S3Client s3Client(ObjectStorageProperties properties) {
         var builder = S3Client.builder()
                 .region(region(properties))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
@@ -28,7 +28,7 @@ public class ObjectStorageConfig {
     }
 
     @Bean
-    S3Presigner s3Presigner(NeonStorageProperties properties) {
+    S3Presigner s3Presigner(ObjectStorageProperties properties) {
         var builder = S3Presigner.builder()
                 .region(region(properties))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
@@ -40,7 +40,7 @@ public class ObjectStorageConfig {
     }
 
     private software.amazon.awssdk.auth.credentials.AwsCredentialsProvider credentialsProvider(
-            NeonStorageProperties properties) {
+            ObjectStorageProperties properties) {
         if (!properties.getAccessKeyId().isBlank() && !properties.getSecretAccessKey().isBlank()) {
             return StaticCredentialsProvider.create(AwsBasicCredentials.create(
                     properties.getAccessKeyId(), properties.getSecretAccessKey()));
@@ -48,7 +48,7 @@ public class ObjectStorageConfig {
         return DefaultCredentialsProvider.create();
     }
 
-    private Region region(NeonStorageProperties properties) {
+    private Region region(ObjectStorageProperties properties) {
         return Region.of(properties.getRegion().isBlank() ? "us-east-1" : properties.getRegion());
     }
 }

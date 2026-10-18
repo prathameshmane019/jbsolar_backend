@@ -331,16 +331,16 @@ Upload directly to object storage:
 ``` text
 React Native
       |
-      +--> Request signed S3 URL
+      +--> Request signed OCI Object Storage URL
                     |
                     +--> Spring Boot
       |
-      +--> Upload directly to S3
+      +--> Upload directly to OCI Object Storage
 ```
 
 This avoids sending large image files through the Spring Boot server.
 Use `POST /api/v1/mobile/files/upload-url` with the farmer resource type
-and ID, PUT the file bytes directly to the returned private S3 URL, then
+and ID, PUT the file bytes directly to the returned private OCI URL, then
 call `POST /api/v1/mobile/files/{fileId}/complete`. Only metadata and
 the private object key are stored in PostgreSQL.
 
@@ -623,6 +623,7 @@ POST /api/v1/policies/{policyId}/payments/dummy-order
 POST /api/v1/payments/{paymentId}/simulate-success
 GET  /api/v1/policies/{policyId}/invoice
 
+GET /api/v1/invoices
 GET /api/v1/invoices/{id}
 
 POST /api/v1/services
@@ -677,7 +678,7 @@ Important security rules:
 -   Store secrets in environment variables/secret management.
 -   Use HTTPS in production.
 -   Keep Aadhaar values out of logs and persist only a keyed HMAC digest.
--   Set a stable `IDENTITY_HASH_KEY` and private Neon Object Storage bucket/credentials in production (`NEON_STORAGE_ENDPOINT`, `NEON_STORAGE_REGION`, `NEON_STORAGE_BUCKET`, `NEON_STORAGE_ACCESS_KEY_ID`, and `NEON_STORAGE_SECRET_ACCESS_KEY`).
+-   Set a stable `IDENTITY_HASH_KEY` and private OCI Object Storage bucket/credentials in production (`OCI_NAMESPACE`, `OCI_REGION`, `OCI_BUCKET`, `OCI_ACCESS_KEY_ID`, and `OCI_SECRET_ACCESS_KEY`).
 
 ------------------------------------------------------------------------
 

@@ -32,12 +32,15 @@ import com.prathamesh.jbsolar.security.UserPrincipal;
 import com.prathamesh.jbsolar.service.AgentService;
 import com.prathamesh.jbsolar.service.AuthService;
 import com.prathamesh.jbsolar.service.FarmerService;
+import com.prathamesh.jbsolar.service.InvoiceService;
 import com.prathamesh.jbsolar.service.PaymentService;
 import com.prathamesh.jbsolar.service.PolicyPlanService;
 import com.prathamesh.jbsolar.service.PolicyService;
 import com.prathamesh.jbsolar.service.VendorService;
 import java.time.LocalDate;
 import com.prathamesh.jbsolar.service.MobileFileService;
+import com.prathamesh.jbsolar.repository.StoredFileRepository;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
@@ -60,7 +63,11 @@ class MobileWorkflowTests {
     @Autowired
     private PaymentService payments;
     @Autowired
+    private InvoiceService invoices;
+    @Autowired
     private MobileFileService mobileFiles;
+    @Autowired
+    private StoredFileRepository storedFiles;
     @MockitoBean
     private S3Client s3;
 
@@ -117,14 +124,14 @@ class MobileWorkflowTests {
         var farmer = farmers.create(farmerRequest("567891234567"), principal);
         var plan = policyPlans.create(new PolicyPlanRequest("Pump Test Plan " + UUID.randomUUID(),
                 null, 12, new BigDecimal("100.00"), new BigDecimal("18.00"), null));
-        var request = new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null,
+        var request = new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null,
                 new BigDecimal("5.50"), new BigDecimal("100.00"));
         var policy = policyService.create(request, principal);
         assertEquals(new BigDecimal("5.50"), policy.pumpPowerHp());
         assertEquals(new BigDecimal("100.00"), policy.motorHeadMeters());
 
         var updated = policyService.update(policy.id(),
-                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null,
+                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null,
                         new BigDecimal("7.50"), new BigDecimal("120.00")), principal);
         assertEquals(new BigDecimal("7.50"), updated.pumpPowerHp());
         assertEquals(new BigDecimal("120.00"), updated.motorHeadMeters());
@@ -140,13 +147,18 @@ class MobileWorkflowTests {
         var plan = policyPlans.create(new PolicyPlanRequest("Upload Test Plan " + UUID.randomUUID(),
                 null, 12, new BigDecimal("100.00"), new BigDecimal("18.00"), null));
         var policy = policyService.create(
-                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null, null), principal);
+                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null, null, null), principal);
         var upload = mobileFiles.createUploadUrl(new UploadUrlRequest(UploadResourceType.POLICY,
                 policy.id(), UploadPurpose.PUMP_SET_IMAGE, "pump.jpg", "image/jpeg", 2048), principal);
 
-        assertTrue(upload.uploadUrl().startsWith("https://test-storage.c-2.us-east-2.aws.neon.tech/"));
+        assertTrue(upload.uploadUrl().startsWith(
+                "https://test-storage.compat.objectstorage.us-ashburn-1.oci.customer-oci.com/"));
         assertTrue(upload.uploadUrl().contains("X-Amz-Signature="));
-        assertTrue(upload.uploadUrl().contains("content-length"), upload.uploadUrl());
+        assertTrue(upload.uploadUrl().contains("X-Amz-SignedHeaders=host"), upload.uploadUrl());
+        org.junit.jupiter.api.Assertions.assertFalse(upload.uploadUrl().contains("content-type"),
+                upload.uploadUrl());
+        org.junit.jupiter.api.Assertions.assertFalse(upload.uploadUrl().contains("content-length"),
+                upload.uploadUrl());
 
         when(s3.headObject(any(HeadObjectRequest.class))).thenReturn(
                 HeadObjectResponse.builder().contentLength(2047L).contentType("image/jpeg").build(),
@@ -163,10 +175,40 @@ class MobileWorkflowTests {
         assertEquals("image/jpeg", completed.contentType());
         assertEquals(2048L, completed.fileSize());
         assertTrue(completed.uploadedAt() != null);
+        assertTrue(completed.viewUrl().startsWith(
+                "https://test-storage.compat.objectstorage.us-ashburn-1.oci.customer-oci.com/"));
+        assertTrue(completed.viewUrl().contains("X-Amz-Signature="));
+        assertTrue(completed.viewUrl().contains("response-content-disposition"));
 
         var repeatedCompletion = mobileFiles.completeUpload(upload.fileId(), principal);
         assertEquals(completed.id(), repeatedCompletion.id());
         verify(s3, times(2)).headObject(any(HeadObjectRequest.class));
+    }
+
+    @Test
+    void permanentlyPurgingPolicyRemovesItsStoredFilesAndObjects() {
+        var vendor = createVendor();
+        var agent = createAgent(vendor.id());
+        var principal = new UserPrincipal(agent.userId(), agent.id(), vendor.id(), agent.mobile(),
+                UserRole.VENDOR_AGENT);
+        var farmer = farmers.create(farmerRequest("789123456789"), principal);
+        var plan = policyPlans.create(new PolicyPlanRequest("Purge Test Plan " + UUID.randomUUID(),
+                null, 12, new BigDecimal("100.00"), new BigDecimal("18.00"), null));
+        var policy = policyService.create(
+                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null, null, null), principal);
+        var upload = mobileFiles.createUploadUrl(new UploadUrlRequest(UploadResourceType.POLICY,
+                policy.id(), UploadPurpose.PUMP_SET_IMAGE, "pump.jpg", "image/jpeg", 2048), principal);
+        when(s3.headObject(any(HeadObjectRequest.class))).thenReturn(
+                HeadObjectResponse.builder().contentLength(2048L).contentType("image/jpeg").build());
+        mobileFiles.completeUpload(upload.fileId(), principal);
+
+        policyService.delete(policy.id(), principal);
+        policyService.purge(policy.id());
+
+        assertTrue(storedFiles.findAllByResourceTypeAndResourceId(
+                UploadResourceType.POLICY, policy.id()).isEmpty());
+        verify(s3).deleteObject(org.mockito.ArgumentMatchers.argThat(
+                (DeleteObjectRequest request) -> request.key().startsWith("policies/" + policy.id() + "/")));
     }
 
     @Test
@@ -183,7 +225,7 @@ class MobileWorkflowTests {
         var plan = policyPlans.create(new PolicyPlanRequest("Scoped Upload Plan " + UUID.randomUUID(),
                 null, 12, new BigDecimal("100.00"), new BigDecimal("18.00"), null));
         var policy = policyService.create(
-                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null, null), otherPrincipal);
+                new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null, null, null), otherPrincipal);
 
         ApiException exception = assertThrows(ApiException.class, () -> mobileFiles.createUploadUrl(
                 new UploadUrlRequest(UploadResourceType.POLICY, policy.id(), UploadPurpose.CUSTOMER_SIGNATURE,
@@ -200,7 +242,8 @@ class MobileWorkflowTests {
         var farmer = farmers.create(farmerRequest("345678912345"), principal);
         var plan = policyPlans.create(new PolicyPlanRequest("Test Plan " + UUID.randomUUID(),
                 null, 12, new BigDecimal("100.00"), new BigDecimal("18.00"), null));
-        var policy = policyService.create(new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(), null, null, null),
+        var policy = policyService.create(new PolicyRequest(farmer.id(), plan.id(), LocalDate.now(),
+                null, null, null, null),
                 principal);
 
         var payment = payments.createDummyOrder(policy.id(), principal);
@@ -209,11 +252,14 @@ class MobileWorkflowTests {
 
         var paid = payments.simulateDummySuccess(payment.id(), principal);
         assertEquals("SUCCESS", paid.status().name());
-        var invoice = payments.getInvoiceForPolicy(policy.id(), principal);
+        var invoice = invoices.getForPolicy(policy.id(), principal);
         assertEquals(payment.id(), invoice.paymentId());
         assertEquals(new BigDecimal("100.00"), invoice.amount());
         assertEquals(new BigDecimal("18.00"), invoice.gstAmount());
         assertEquals(new BigDecimal("118.00"), invoice.totalAmount());
+        assertEquals(farmer.fullName(), invoice.farmerName());
+        assertEquals(plan.name(), invoice.planName());
+        assertEquals(vendor.name(), invoice.vendorName());
         assertEquals(invoice.id(), payments.simulateDummySuccess(payment.id(), principal).invoiceId());
         assertEquals("ACTIVE", policyService.get(policy.id(), principal).status().name());
     }
