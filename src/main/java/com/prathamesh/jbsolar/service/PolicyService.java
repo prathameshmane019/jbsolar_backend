@@ -38,17 +38,7 @@ public class PolicyService {
     }
 
     public PolicyResponse create(PolicyRequest request, UserPrincipal principal) {
-        System.out.println("\n========== POLICY CREATE REQUEST ==========");
-        System.out.println("Farmer ID       : " + request.farmerId());
-        System.out.println("Policy Plan ID  : " + request.policyPlanId());
-        System.out.println("Start Date      : " + request.startDate());
-        System.out.println("Vendor ID       : " + request.vendorId());
-        System.out.println("Agent ID        : " + request.agentId());
-        System.out.println("Pump Power (HP) : " + request.pumpPowerHp());
-        System.out.println("Motor Head (m)  : " + request.motorHeadMeters());
-        System.out.println("Authenticated Role: " + principal.role());
-        System.out.println("Authenticated Vendor ID: " + principal.vendorId());
-        System.out.println("============================================\n");
+
         var farmer = (principal.role() == UserRole.ADMIN
                 ? farmers.findById(request.farmerId())
                 : farmers.findByIdAndCreatedByVendorId(request.farmerId(), principal.vendorId()))
@@ -67,7 +57,6 @@ public class PolicyService {
                 new ApiException(HttpStatus.NOT_FOUND, "vendor_not_found", "Vendor was not found"));
 
         Policy policy = new Policy();
-        policy.setPolicyNumber("JB-POL-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase());
         policy.setFarmer(farmer); policy.setPlan(plan); policy.setVendor(vendor);
         policy.setStartDate(request.startDate());
         policy.setEndDate(request.startDate().plusMonths(plan.getDurationMonths()));
