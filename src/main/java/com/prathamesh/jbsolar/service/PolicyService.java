@@ -69,7 +69,7 @@ public class PolicyService {
                 new ApiException(HttpStatus.NOT_FOUND, "vendor_not_found", "Vendor was not found"));
 
         Policy policy = new Policy();
-        policy.setPolicyNumber("JB-POL-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase());
+        policy.setPolicyNumber(" POL-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase());
         policy.setFarmer(farmer); policy.setPlan(plan); policy.setVendor(vendor);
         policy.setStartDate(request.startDate());
         policy.setEndDate(request.startDate().plusMonths(plan.getDurationMonths()));

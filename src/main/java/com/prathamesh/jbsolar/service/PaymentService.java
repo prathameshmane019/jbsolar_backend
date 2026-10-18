@@ -51,7 +51,7 @@ public class PaymentService {
         String reference = UUID.randomUUID().toString();
         Payment payment = new Payment();
         payment.setPolicy(policy);
-        payment.setPaymentNumber("JB-PAY-" + reference.substring(0, 12).toUpperCase(java.util.Locale.ROOT));
+        payment.setPaymentNumber(" PAY-" + reference.substring(0, 12).toUpperCase(java.util.Locale.ROOT));
         payment.setGateway("DUMMY");
         payment.setGatewayOrderId("dummy-order-" + reference);
         payment.setAmount(policy.getTotalAmount());
