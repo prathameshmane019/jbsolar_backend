@@ -9,3 +9,4 @@ public record InvoiceResponse(UUID id, String invoiceNumber, UUID policyId, Stri
         UUID paymentId, LocalDate invoiceDate, BigDecimal amount, BigDecimal gstAmount,
         BigDecimal totalAmount, Instant createdAt) {
 }
+
