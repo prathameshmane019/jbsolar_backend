@@ -14,3 +14,4 @@ public record InvoiceResponse(UUID id, String invoiceNumber, UUID policyId, Stri
         String vendorMobile, String vendorEmail, String paymentNumber, String paymentMethod,
         String gateway, String gatewayPaymentId, Instant paidAt) {
 }
+
