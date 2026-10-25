@@ -83,6 +83,9 @@ public class VendorAgent {
     )
     private String fullName;
 
+    @Column(name = "area_code", length = 30)
+    private String areaCode;
+
     @Enumerated(EnumType.STRING)
     @Column(
             nullable = false,

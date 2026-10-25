@@ -19,7 +19,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class ApiRateLimitFilter extends OncePerRequestFilter {
     private static final long WINDOW_MILLIS = 60_000;
     private static final int LOGIN_LIMIT = 10;
-    private static final int EXPORT_LIMIT = 2;
+    private static final int EXPORT_LIMIT = 10;
     private static final int AUTHENTICATED_LIMIT = 120;
     private static final int ANONYMOUS_LIMIT = 60;
     private static final int MAX_TRACKED_CLIENTS = 20_000;

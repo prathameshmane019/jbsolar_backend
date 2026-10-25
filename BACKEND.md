@@ -24,9 +24,9 @@ Run with `mvnw.cmd spring-boot:run` on Windows or `./mvnw spring-boot:run` on ma
 
 ## Runtime capacity and request limits
 
-The application uses a small default database pool (`DB_POOL_MAX_SIZE=5`, `DB_POOL_MIN_IDLE=1`, and a 20-second `DB_CONNECTION_TIMEOUT_MS`) and caps embedded Tomcat at 50 request threads and 100 connections. These defaults suit a small deployment; override them with the corresponding environment variables when sizing a larger instance. Hibernate batch-fetches lazy associations in groups of 32, and paged policy/agent results load their related entities together to avoid per-row database queries.
+The application uses a small default database pool (`DB_POOL_MAX_SIZE=5`, `DB_POOL_MIN_IDLE=1`, and a 20-second `DB_CONNECTION_TIMEOUT_MS`) and caps embedded Tomcat at 50 request threads and 100 connections. Spring MVC async responses (including streamed Excel downloads) have a five-minute timeout by default; override it with `ASYNC_REQUEST_TIMEOUT_MS` if needed. These defaults suit a small deployment; override them with the corresponding environment variables when sizing a larger instance. Hibernate batch-fetches lazy associations in groups of 32, and paged policy/agent results load their related entities together to avoid per-row database queries.
 
-API traffic is limited per application instance using fixed one-minute windows: 10 login attempts per client address, 120 requests per authenticated user, 60 requests per unauthenticated client address, and 2 exports per authenticated user. Rejected requests return `429 Too Many Requests` with `Retry-After`. The limiter keeps a bounded in-memory client table, so limits are per instance rather than shared across replicas; use a trusted edge gateway or distributed limiter when global limits are required. IP-based limits use the servlet remote address, so configure trusted proxy address forwarding at the edge if the application is behind a proxy that masks client addresses.
+API traffic is limited per application instance using fixed one-minute windows: 10 login attempts per client address, 120 requests per authenticated user, 60 requests per unauthenticated client address, and 10 exports per authenticated user. Rejected requests return `429 Too Many Requests` with `Retry-After`. The limiter keeps a bounded in-memory client table, so limits are per instance rather than shared across replicas; use a trusted edge gateway or distributed limiter when global limits are required. IP-based limits use the servlet remote address, so configure trusted proxy address forwarding at the edge if the application is behind a proxy that masks client addresses.
 
 Excel HTTP downloads stream the generated workbook to the response rather than buffering the complete file in application heap. Direct service calls used by tests and other in-process clients retain the byte-array export method.
 
@@ -80,6 +80,7 @@ Use the returned access token in `Authorization: Bearer <accessToken>`. Tokens e
 | GET, POST, PUT, DELETE | `/api/v1/policy-plans[/{id}]` | Read: authenticated; write: admin |
 | PATCH | `/api/v1/policy-plans/{id}/status?status=ACTIVE` | Admin |
 | GET, POST, PUT, DELETE | `/api/v1/policies[/{id}]` | Authenticated; agents limited to their vendor |
+
 | POST | `/api/v1/mobile/files/upload-url` | Vendor agent; own farmer or policy resource |
 | POST | `/api/v1/mobile/files/{id}/complete` | Upload owner |
 | GET | `/api/v1/mobile/files?resourceType=...&resourceId=...` | Vendor agent; own farmer or policy resource |
@@ -93,6 +94,8 @@ Use the returned access token in `Authorization: Bearer <accessToken>`. Tokens e
 | POST | `/api/v1/recycle-bin/{resource}/{id}/restore` | Admin |
 | DELETE | `/api/v1/recycle-bin/{resource}/{id}` | Admin; permanent purge |
 | GET | `/api/v1/exports` or `/api/v1/exports/{resource}` | Admin; downloads `.xlsx` |
+
+Agent create and update requests accept an optional `areaCode` (up to 30 characters) to identify the area assigned to an agent. Agent responses include this value; it can also be used in agent search and sorting. Existing agents may leave it unset. Add the nullable `area_code VARCHAR(30)` column to `vendor_agents` in a versioned migration when upgrading an existing production database; local `DDL_AUTO=update` adds it automatically.
 
 Collection endpoints return a `PageResponse` with `content`, `page` (zero-based), `size`, `totalElements`, `totalPages`, `first`, and `last`. All paged list endpoints accept `page` (default `0`), `size` (default `25`, maximum `100`), `sort`, and `direction` (`asc` or `desc`; defaults to `createdAt` descending), and stable ID tie-breaking is applied. Invalid page bounds, sort fields, directions, date ranges, and status values return `400`. Farmer collection search also matches an exact 12-digit Aadhaar number against its keyed HMAC; Aadhaar plaintext is never stored or returned.
 

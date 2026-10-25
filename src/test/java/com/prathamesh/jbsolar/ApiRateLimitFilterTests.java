@@ -29,8 +29,31 @@ class ApiRateLimitFilterTests {
         assertNotNull(limitedResponse.getHeader("Retry-After"));
     }
 
+    @Test
+    void allowsTenExportRequestsAcrossResourcesPerClientAndThenRateLimits() throws Exception {
+        ApiRateLimitFilter filter = new ApiRateLimitFilter();
+        SecurityContextHolder.clearContext();
+
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String path = attempt % 2 == 0 ? "/api/v1/exports" : "/api/v1/exports/policies";
+            assertEquals(200, invoke(filter, path).getStatus());
+        }
+
+        MockHttpServletResponse limitedResponse = invoke(filter, "/api/v1/exports/policies");
+        assertEquals(429, limitedResponse.getStatus());
+        assertNotNull(limitedResponse.getHeader("Retry-After"));
+    }
+
     private MockHttpServletResponse invoke(ApiRateLimitFilter filter) throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/login");
+        return invoke(filter, "POST", "/api/v1/auth/login");
+    }
+
+    private MockHttpServletResponse invoke(ApiRateLimitFilter filter, String path) throws Exception {
+        return invoke(filter, "GET", path);
+    }
+
+    private MockHttpServletResponse invoke(ApiRateLimitFilter filter, String method, String path) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(method, path);
         request.setRemoteAddr("192.0.2.10");
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.doFilter(request, response, new MockFilterChain());

@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record AgentUpdateRequest(@NotNull UUID vendorId, @NotBlank @Size(max = 150) String fullName,
+        @Size(max = 30) String areaCode,
         @NotBlank @Pattern(regexp = "^[+0-9][0-9+ -]{7,19}$") String mobile,
         @NotNull RecordStatus status) {
 }

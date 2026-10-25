@@ -2,6 +2,8 @@ package com.prathamesh.jbsolar.security;
 
 import java.util.Arrays;
 
+import jakarta.servlet.DispatcherType;
+
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -43,7 +45,8 @@ public class SecurityConfig {
         return http.cors(cors -> { }).csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
                         .requestMatchers("/api/v1/auth/**", "/actuator/health", "/v3/api-docs/**",
                         "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated())

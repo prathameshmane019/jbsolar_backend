@@ -81,6 +81,7 @@ CREATE TABLE vendor_agents (
                                user_id    UUID         NOT NULL UNIQUE REFERENCES users(id),
                                vendor_id  UUID         NOT NULL REFERENCES vendors(id),
                                full_name  VARCHAR(150) NOT NULL,
+                               area_code  VARCHAR(30)  NULL,
                                status     VARCHAR(255) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
                                created_at TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                updated_at TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,

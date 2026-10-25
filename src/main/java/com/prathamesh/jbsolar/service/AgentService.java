@@ -87,6 +87,7 @@ public class AgentService {
         agent.setUser(user);
         agent.setVendor(vendor);
         agent.setFullName(request.fullName().trim());
+        agent.setAreaCode(normalizeAreaCode(request.areaCode()));
 
         agents.save(agent);
 
@@ -111,6 +112,7 @@ public class AgentService {
         }
         agent.setVendor(vendor);
         agent.setFullName(request.fullName().trim());
+        agent.setAreaCode(normalizeAreaCode(request.areaCode()));
         agent.setStatus(request.status());
         agent.getUser().setMobile(mobile);
         return toResponse(agent);
@@ -150,7 +152,7 @@ public class AgentService {
     @Transactional(readOnly = true)
     public PageResponse<AgentResponse> search(DataQuery query, UserPrincipal principal) {
         Specification<VendorAgent> specification = DataQuerySupport.specification(query,
-                        List.of("fullName","agentCode", "user.mobile", "vendor.name"), true, "vendor.id", false);
+                        List.of("fullName", "areaCode", "agentCode", "user.mobile", "vendor.name"), true, "vendor.id", false);
         if (principal.role() != UserRole.ADMIN) {
             if (principal.role() != UserRole.VENDOR_AGENT || principal.agentId() == null) {
                 throw new AccessDeniedException("Agent profile is required");
@@ -159,7 +161,7 @@ public class AgentService {
                     builder.equal(root.get("id"), principal.agentId()));
         }
         var page = agents.findAll(specification, DataQuerySupport.pageable(query,
-                        Set.of("fullName","agentCode", "user.mobile", "vendor.name", "status", "createdAt", "updatedAt")));
+                        Set.of("fullName", "areaCode", "agentCode", "user.mobile", "vendor.name", "status", "createdAt", "updatedAt")));
         return PageResponse.from(page.map(this::toResponse));
     }
 
@@ -198,10 +200,19 @@ public class AgentService {
                 agent.getVendor().getId(),
                 agent.getVendor().getName(),
                 agent.getFullName(),
+                agent.getAreaCode(),
                 agent.getUser().getMobile(),
                 agent.getStatus(),
                 agent.getVendor().getVendorCode()
 
         );
+    }
+
+    private String normalizeAreaCode(String areaCode) {
+        if (areaCode == null || areaCode.isBlank()) {
+            return null;
+        }
+
+        return areaCode.trim();
     }
 }
