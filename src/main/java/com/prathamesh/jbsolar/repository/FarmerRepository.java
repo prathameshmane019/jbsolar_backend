@@ -9,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import com.prathamesh.jbsolar.domain.Farmer;
 
 public interface FarmerRepository extends JpaRepository<Farmer, UUID>, JpaSpecificationExecutor<Farmer> {
@@ -21,6 +23,9 @@ public interface FarmerRepository extends JpaRepository<Farmer, UUID>, JpaSpecif
     boolean existsByAadhaarHashAndIdNot(String aadhaarHash, UUID id);
     List<Farmer> findAllByCreatedByVendorId(UUID vendorId);
     List<Farmer> findAllByDeletedAtIsNotNull();
-    Optional<Farmer> findByIdAndCreatedByVendorId(UUID id, UUID vendorId);
+    @Query("select farmer from Farmer farmer join farmer.createdBy agent "
+            + "where farmer.id = :farmerId and agent.vendor.id = :vendorId")
+    Optional<Farmer> findByIdAndCreatedByVendorId(@Param("farmerId") UUID farmerId,
+            @Param("vendorId") UUID vendorId);
     long countByCreatedById(UUID agentId);
 }

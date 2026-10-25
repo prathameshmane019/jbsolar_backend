@@ -72,9 +72,8 @@ public class FarmerService {
 
     @Transactional(readOnly = true)
     public List<FarmerResponse> list(UserPrincipal principal) {
-        List<Farmer> result = principal.role() == UserRole.ADMIN
-                ? farmers.findAll() : farmers.findAllByCreatedByVendorId(principal.vendorId());
-        return result.stream().filter(row -> row.getDeletedAt() == null).map(this::toResponse).toList();
+        return farmers.findAll().stream().filter(row -> row.getDeletedAt() == null)
+                .map(this::toResponse).toList();
     }
     @Transactional(readOnly = true)
     public PageResponse<FarmerResponse> search(DataQuery query, UserPrincipal principal) {
@@ -91,10 +90,8 @@ public class FarmerService {
 
     @Transactional(readOnly = true)
     public FarmerResponse get(UUID id, UserPrincipal principal) {
-        Farmer farmer = principal.role() == UserRole.ADMIN
-                ? farmers.findById(id).filter(row -> row.getDeletedAt() == null).orElseThrow(() -> notFound())
-                : farmers.findByIdAndCreatedByVendorId(id, principal.vendorId())
-                        .filter(row -> row.getDeletedAt() == null).orElseThrow(() -> notFound());
+        Farmer farmer = farmers.findById(id).filter(row -> row.getDeletedAt() == null)
+                .orElseThrow(this::notFound);
         return toResponse(farmer);
     }
 

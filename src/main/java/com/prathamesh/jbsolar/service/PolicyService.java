@@ -40,11 +40,10 @@ public class PolicyService {
     }
 
     public PolicyResponse create(PolicyRequest request, UserPrincipal principal) {
-        var farmer = (principal.role() == UserRole.ADMIN
-                ? farmers.findById(request.farmerId())
-                : farmers.findByIdAndCreatedByVendorId(request.farmerId(), principal.vendorId()))
+        var farmer = farmers.findById(request.farmerId())
                 .filter(row -> row.getDeletedAt() == null)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "farmer_not_found", "Farmer was not found in your accessible vendor data"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "farmer_not_found",
+                        "Farmer was not found"));
 
         PolicyPlan plan = plans.findById(request.policyPlanId())
                 .filter(p -> p.getDeletedAt() == null && p.getStatus() == RecordStatus.ACTIVE)
@@ -121,12 +120,10 @@ public class PolicyService {
 
         var farmer = policy.getFarmer().getId().equals(request.farmerId())
                 ? policy.getFarmer()
-                : (principal.role() == UserRole.ADMIN
-                ? farmers.findById(request.farmerId())
-                : farmers.findByIdAndCreatedByVendorId(request.farmerId(), principal.vendorId()))
+                : farmers.findById(request.farmerId())
                 .filter(row -> row.getDeletedAt() == null)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "farmer_not_found",
-                        "Farmer was not found in your accessible vendor data"));
+                        "Farmer was not found"));
 
         PolicyPlan plan = plans.findById(request.policyPlanId())
                 .filter(row -> row.getDeletedAt() == null && row.getStatus() == RecordStatus.ACTIVE)
